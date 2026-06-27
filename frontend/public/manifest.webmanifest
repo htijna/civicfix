@@ -1,0 +1,9 @@
+{
+  "name": "CivicFix Civic Issue Reporting",
+  "short_name": "CivicFix",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f5f2ea",
+  "theme_color": "#145c4a",
+  "icons": []
+}

@@ -1,0 +1,13 @@
+node_modules/
+dist/
+.env
+uploads/
+!backend/uploads/
+backend/uploads/*
+!backend/uploads/.gitkeep
+*.log
+coverage/
+.cache/
+.vercel/
+.DS_Store
+Thumbs.db
