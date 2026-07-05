@@ -6,7 +6,9 @@ export default function NotificationPanel() {
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState([]);
   const load = () => api('/notifications').then(data => setItems(data.notifications || [])).catch(() => {});
-  useEffect(load, []);
+  useEffect(() => {
+    load();
+  }, []);
   const unread = items.filter(item => !item.read).length;
   const readAll = async () => { await api('/notifications/read-all', { method: 'PATCH' }); load(); };
   return <div className="notification-wrap">
