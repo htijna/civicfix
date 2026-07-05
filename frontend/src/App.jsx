@@ -311,8 +311,8 @@ function Report() {
         <div className="card-title"><span><FileText /></span><div><h3>Issue details</h3><p>Describe the problem clearly.</p></div></div>
         <label>Complaint title <em>*</em><input name="title" required maxLength="120" placeholder="e.g. Large pothole near school entrance" /></label>
         <div className="two">
-          <label>Category <em>*</em><select name="category" required defaultValue=""><option value="" disabled>Select a category</option>{categories.map(x => <option key={x}>{x}</option>)}</select></label>
-          <label>Contact number<input name="contactNumber" placeholder="+91 98765 43210" /></label>
+          <label><span>Category <em>*</em></span><select name="category" required defaultValue=""><option value="" disabled>Select a category</option>{categories.map(x => <option key={x}>{x}</option>)}</select></label>
+          <label><span>Contact number</span><input name="contactNumber" placeholder="+91 98765 43210" /></label>
         </div>
         <label>Description <em>*</em><textarea name="description" required minLength="10" rows="5" placeholder="Describe what you observed and any safety concerns…" /></label>
       </section>
