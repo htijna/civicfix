@@ -1,10 +1,10 @@
+import 'dotenv/config';
 import express from 'express';
 import mongoose from 'mongoose';
 import cors from 'cors';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import morgan from 'morgan';
-import dotenv from 'dotenv';
 import authRoutes from './routes/authRoutes.js';
 import complaintRoutes from './routes/complaintRoutes.js';
 import uploadRoutes from './routes/uploadRoutes.js';
@@ -13,8 +13,6 @@ import departmentRoutes from './routes/departmentRoutes.js';
 import userRoutes from './routes/userRoutes.js';
 import reportRoutes from './routes/reportRoutes.js';
 import { sanitizeInput } from './middleware/sanitize.js';
-
-dotenv.config();
 if(process.env.NODE_ENV==='production'&&!process.env.JWT_SECRET)throw new Error('JWT_SECRET is required in production');
 
 const app=express();
