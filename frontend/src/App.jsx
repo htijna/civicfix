@@ -3,7 +3,7 @@ import { Link, NavLink, Navigate, Route, Routes, useLocation, useNavigate } from
 import {
   AlertCircle, ArrowRight, Bell, Building2, Camera, Check, CheckCircle2,
   ChevronDown, CircleDot, Clock3, FileText, Home, LayoutDashboard, LogOut,
-  MapPin, Menu, Plus, Search, Send, Settings, ShieldCheck, Sparkles, Upload, User
+  MapPin, Menu, Plus, Search, Send, Settings, ShieldCheck, Sparkles, User
 } from 'lucide-react';
 import {
   Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis
@@ -12,6 +12,7 @@ import { api as request } from './services/api';
 import DarkModeToggle from './components/DarkModeToggle';
 import NotificationPanel from './components/NotificationPanel';
 import MapPicker from './components/MapPicker';
+import IssuePhotoUploader from './components/IssuePhotoUploader';
 import Profile from './pages/Profile';
 import ComplaintDetails from './pages/ComplaintDetails';
 import AdminDashboard from './pages/AdminDashboard';
@@ -368,14 +369,7 @@ function Report() {
         <div className="two"><label>Latitude<input name="latitude" type="number" step="any" value={Number.isFinite(location.latitude) ? location.latitude : ''} onChange={e => updateLocation({ latitude: e.target.value === '' ? undefined : Number(e.target.value), source: 'manual' })} placeholder="9.9312" /></label><label>Longitude<input name="longitude" type="number" step="any" value={Number.isFinite(location.longitude) ? location.longitude : ''} onChange={e => updateLocation({ longitude: e.target.value === '' ? undefined : Number(e.target.value), source: 'manual' })} placeholder="76.2673" /></label></div>
         <MapPicker value={location} onChange={updateLocation} />
       </section>
-      <section className="form-card">
-        <div className="card-title"><span><Upload /></span><div><h3>Photos</h3><p>Upload up to five clear issue photos.</p></div></div>
-        <label className="dropzone"><Upload /><b>Choose photos</b><small>JPG, PNG or WEBP · maximum 5 files · 5 MB each</small>
-          <input type="file" accept="image/jpeg,image/png,image/webp" multiple onChange={e => setImages([...e.target.files].slice(0, 5))} />
-        </label>
-        {!!images.length && <p className="files"><Check />{images.length} photo{images.length > 1 ? 's' : ''} selected</p>}
-        {!!images.length && <div className="image-previews">{images.map((image, index) => <figure key={`${image.name}-${index}`}><img src={URL.createObjectURL(image)} alt={image.name} /><button type="button" onClick={() => setImages(images.filter((_, i) => i !== index))}>×</button></figure>)}</div>}
-      </section>
+      <IssuePhotoUploader images={images} setImages={setImages} />
       <div className="form-bottom"><label className="check"><input name="anonymous" type="checkbox" /> Submit anonymously</label><button disabled={busy} className="primary">{busy ? 'Submitting…' : 'Submit complaint'} <ArrowRight /></button></div>
     </form>
   </main><Footer /></>;
