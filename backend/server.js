@@ -1,5 +1,7 @@
 import 'dotenv/config';
 import express from 'express';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import mongoose from 'mongoose';
 import cors from 'cors';
 import helmet from 'helmet';
@@ -16,12 +18,14 @@ import { sanitizeInput } from './middleware/sanitize.js';
 if(process.env.NODE_ENV==='production'&&!process.env.JWT_SECRET)throw new Error('JWT_SECRET is required in production');
 
 const app=express();
+const __dirname=path.dirname(fileURLToPath(import.meta.url));
 app.set('trust proxy',1);
 const allowedOrigins=(process.env.CLIENT_URL||'http://localhost:5173').split(',').map(x=>x.trim());
 app.use(helmet(),cors({
  origin(origin,callback){if(!origin||allowedOrigins.includes(origin))return callback(null,true);callback(new Error('Origin not allowed by CORS'))},
  credentials:true
 }),express.json({limit:'2mb'}),sanitizeInput,morgan(process.env.NODE_ENV==='production'?'combined':'dev'));
+app.use('/uploads',express.static(path.join(__dirname,'uploads'),{maxAge:'7d'}));
 app.use('/api',rateLimit({windowMs:15*60*1000,limit:200,standardHeaders:true,legacyHeaders:false}));
 app.get('/api/health',(_,res)=>res.json({
  status:'ok',

@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
-import { Link, NavLink, Navigate, Route, Routes, useNavigate } from 'react-router-dom';
+import { Link, NavLink, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import {
   AlertCircle, ArrowRight, Bell, Building2, Camera, Check, CheckCircle2,
   ChevronDown, CircleDot, Clock3, FileText, Home, LayoutDashboard, LogOut,
@@ -8,7 +8,7 @@ import {
 import {
   Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis
 } from 'recharts';
-import { API, api as request } from './services/api';
+import { api as request } from './services/api';
 import DarkModeToggle from './components/DarkModeToggle';
 import NotificationPanel from './components/NotificationPanel';
 import MapPicker from './components/MapPicker';
@@ -32,6 +32,19 @@ function AuthProvider({ children }) {
   const [user, setUser] = useState(() => {
     try { return JSON.parse(localStorage.getItem('civicfix_user')); } catch { return null; }
   });
+  useEffect(() => {
+    const clearUser = () => setUser(null);
+    window.addEventListener('civicfix:auth-expired', clearUser);
+    if (localStorage.getItem('civicfix_token')) {
+      request('/auth/me')
+        .then(data => {
+          localStorage.setItem('civicfix_user', JSON.stringify(data.user));
+          setUser(data.user);
+        })
+        .catch(() => {});
+    }
+    return () => window.removeEventListener('civicfix:auth-expired', clearUser);
+  }, []);
   const login = async (email, password) => {
     const data = await request('/auth/login', {
       method: 'POST', body: JSON.stringify({ email, password })
@@ -68,30 +81,30 @@ function Logo() {
 function Header() {
   const [open, setOpen] = useState(false);
   const { user } = useAuth();
+  const reportTo = user ? '/report' : '/login?redirect=/dashboard';
   return <header>
     <Logo />
     <nav className={open ? 'open' : ''}>
       <NavLink to="/">Home</NavLink>
       <a href="/#how">How it works</a>
       <a href="/#impact">Our impact</a>
-      {user && <NavLink to="/dashboard">Dashboard</NavLink>}
     </nav>
     <div className="header-actions">
-      <DarkModeToggle />
+      {user && <DarkModeToggle />}
       {user && <NotificationPanel />}
-      {user
-        ? <Link to="/dashboard" className="text-btn">{user.name}</Link>
-        : <Link to="/login" className="text-btn">Log in</Link>}
-      <Link to="/report" className="primary small"><Plus size={17} />Report an issue</Link>
+      {user && <Link to="/dashboard" className="text-btn">{user.name}</Link>}
+      <Link to={reportTo} className="primary small"><Plus size={17} />Report an issue</Link>
       <button className="menu" onClick={() => setOpen(!open)} aria-label="Menu"><Menu /></button>
     </div>
   </header>;
 }
 
 function Footer() {
+  const { user } = useAuth();
+  const reportTo = user ? '/report' : '/login?redirect=/dashboard';
   return <footer>
     <div><Logo /><p>Making our neighbourhoods better,<br />one report at a time.</p></div>
-    <div><b>Platform</b><a href="/#how">How it works</a><Link to="/report">Report issue</Link><Link to="/dashboard">Track complaint</Link></div>
+    <div><b>Platform</b><a href="/#how">How it works</a><Link to={reportTo}>Report issue</Link><Link to="/dashboard">Track complaint</Link></div>
     <div><b>Account</b><Link to="/register">Register</Link><Link to="/login">Sign in</Link></div>
     <div><b>Data</b><p>All displayed statistics are calculated from live complaint records.</p></div>
     <small>© 2026 CivicFix. Built for stronger communities.</small>
@@ -99,6 +112,8 @@ function Footer() {
 }
 
 function HomePage() {
+  const { user } = useAuth();
+  const reportTo = user ? '/report' : '/login?redirect=/dashboard';
   const [stats, setStats] = useState({
     total: 0, resolved: 0, resolutionRate: 0, averageResolutionDays: 0
   });
@@ -110,7 +125,7 @@ function HomePage() {
         <h1>See a problem?<br /><em>Let’s fix it.</em></h1>
         <p>Report civic issues in minutes, follow their progress, and help build a cleaner, safer neighbourhood for everyone.</p>
         <div className="hero-actions">
-          <Link to="/report" className="primary"><Camera size={19} />Report an issue</Link>
+          <Link to={reportTo} className="primary"><Camera size={19} />Report an issue</Link>
           <a href="#how" className="secondary">See how it works <ArrowRight size={18} /></a>
         </div>
         <div className="trust"><ShieldCheck /><span><b>Live and accountable</b><br />Every number comes from the connected database</span></div>
@@ -150,7 +165,7 @@ function HomePage() {
     <section className="cta" id="contact"><span><Send /></span><div><h2>Need help with a report?</h2><p>Contact your local civic team at support@civicfix.example.</p></div><a className="primary" href="mailto:support@civicfix.example">Contact us</a></section>
     <section className="cta">
       <span><MapPin /></span><div><h2>Your neighbourhood needs your eyes.</h2><p>Create an account and submit a verified report.</p></div>
-      <Link to="/report" className="primary">Report an issue <ArrowRight size={18} /></Link>
+      <Link to={reportTo} className="primary">Report an issue <ArrowRight size={18} /></Link>
     </section>
   </main><Footer /></>;
 }
@@ -183,7 +198,8 @@ function Metric({ icon: Icon, n, label, note, c }) {
 }
 
 function Dashboard() {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
+  const nav = useNavigate();
   const [complaints, setComplaints] = useState([]);
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(true);
@@ -216,7 +232,16 @@ function Dashboard() {
   }, [complaints]);
 
   return <div className="app-shell"><Sidebar /><div className="dashboard">
-    <div className="dash-top"><div><h1>Hello, {user.name}</h1><p>Live data from your civic complaints.</p></div><Link className="primary" to="/report"><Plus />New complaint</Link></div>
+    <div className="dash-top">
+      <div><h1>Hello, {user.name}</h1><p>Live data from your civic complaints.</p></div>
+      <div className="dash-actions">
+        <span className="dash-user"><User size={17} />{user.name}</span>
+        <NotificationPanel />
+        <Link className="secondary dash-profile" to="/profile"><User size={17} />Profile</Link>
+        <button className="secondary dash-logout" onClick={() => { logout(); nav('/'); }}><LogOut size={17} />Logout</button>
+        <Link className="primary" to="/report"><Plus />New complaint</Link>
+      </div>
+    </div>
     {error && <p className="form-error">{error}</p>}
     <div className="metric-grid">
       <Metric icon={FileText} n={complaints.length} label="Total complaints" note="All submitted reports" c="green" />
@@ -266,6 +291,33 @@ function Report() {
   const [reference, setReference] = useState('');
   const [images, setImages] = useState([]);
   const [location, setLocation] = useState({});
+
+  useEffect(() => {
+    if (location.source !== 'current' || !Number.isFinite(location.latitude) || !Number.isFinite(location.longitude) || location.address) return;
+    const controller = new AbortController();
+    const params = new URLSearchParams({
+      format: 'jsonv2',
+      lat: String(location.latitude),
+      lon: String(location.longitude)
+    });
+    fetch(`https://nominatim.openstreetmap.org/reverse?${params}`, { signal: controller.signal })
+      .then(response => response.ok ? response.json() : null)
+      .then(data => {
+        const address = data?.display_name || `${location.latitude.toFixed(6)}, ${location.longitude.toFixed(6)}`;
+        setLocation(current => current.address ? current : { ...current, address });
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) {
+          setLocation(current => current.address || !Number.isFinite(current.latitude) || !Number.isFinite(current.longitude)
+            ? current
+            : { ...current, address: `${current.latitude.toFixed(6)}, ${current.longitude.toFixed(6)}` });
+        }
+      });
+    return () => controller.abort();
+  }, [location.address, location.latitude, location.longitude, location.source]);
+
+  const updateLocation = changes => setLocation(current => ({ ...current, ...changes }));
+
   const submit = async e => {
     e.preventDefault(); setBusy(true); setError('');
     const form = new FormData(e.currentTarget);
@@ -274,14 +326,7 @@ function Report() {
       if (images.length) {
         const uploadBody = new FormData();
         images.forEach(image => uploadBody.append('images', image));
-        const token = localStorage.getItem('civicfix_token');
-        const uploadResponse = await fetch(`${API}/uploads`, {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${token}` },
-          body: uploadBody
-        });
-        const uploadData = await uploadResponse.json();
-        if (!uploadResponse.ok) throw new Error(uploadData.message || 'Image upload failed');
+        const uploadData = await request('/uploads', { method: 'POST', body: uploadBody });
         uploadedImages = uploadData.urls;
       }
       const data = await request('/complaints', {
@@ -291,10 +336,10 @@ function Report() {
           category: form.get('category'), contactNumber: form.get('contactNumber'),
           anonymous: form.get('anonymous') === 'on', images: uploadedImages,
           location: {
-            address: form.get('address'), ward: form.get('ward'),
-            landmark: form.get('landmark'),
-            latitude: location.latitude || (form.get('latitude') ? Number(form.get('latitude')) : undefined),
-            longitude: location.longitude || (form.get('longitude') ? Number(form.get('longitude')) : undefined)
+            address: location.address || form.get('address'), ward: location.ward || form.get('ward'),
+            landmark: location.landmark || form.get('landmark'),
+            latitude: Number.isFinite(location.latitude) ? location.latitude : (form.get('latitude') ? Number(form.get('latitude')) : undefined),
+            longitude: Number.isFinite(location.longitude) ? location.longitude : (form.get('longitude') ? Number(form.get('longitude')) : undefined)
           }
         })
       });
@@ -318,10 +363,10 @@ function Report() {
       </section>
       <section className="form-card">
         <div className="card-title"><span><MapPin /></span><div><h3>Location</h3><p>Give the team enough detail to find it.</p></div></div>
-        <label>Address <em>*</em><input name="address" required placeholder="Street, landmark or area" /></label>
-        <div className="two"><label>Ward<input name="ward" placeholder="e.g. Ward 12" /></label><label>Landmark<input name="landmark" placeholder="Opposite Government School" /></label></div>
-        <div className="two"><label>Latitude<input name="latitude" type="number" step="any" value={location.latitude || ''} onChange={e => setLocation({ ...location, latitude: Number(e.target.value) })} placeholder="9.9312" /></label><label>Longitude<input name="longitude" type="number" step="any" value={location.longitude || ''} onChange={e => setLocation({ ...location, longitude: Number(e.target.value) })} placeholder="76.2673" /></label></div>
-        <MapPicker value={location} onChange={setLocation} />
+        <label>Address <em>*</em><input name="address" required value={location.address || ''} onChange={e => updateLocation({ address: e.target.value, source: 'manual' })} placeholder="Street, landmark or area" /></label>
+        <div className="two"><label>Ward<input name="ward" value={location.ward || ''} onChange={e => updateLocation({ ward: e.target.value })} placeholder="e.g. Ward 12" /></label><label>Landmark<input name="landmark" value={location.landmark || ''} onChange={e => updateLocation({ landmark: e.target.value })} placeholder="Opposite Government School" /></label></div>
+        <div className="two"><label>Latitude<input name="latitude" type="number" step="any" value={Number.isFinite(location.latitude) ? location.latitude : ''} onChange={e => updateLocation({ latitude: e.target.value === '' ? undefined : Number(e.target.value), source: 'manual' })} placeholder="9.9312" /></label><label>Longitude<input name="longitude" type="number" step="any" value={Number.isFinite(location.longitude) ? location.longitude : ''} onChange={e => updateLocation({ longitude: e.target.value === '' ? undefined : Number(e.target.value), source: 'manual' })} placeholder="76.2673" /></label></div>
+        <MapPicker value={location} onChange={updateLocation} />
       </section>
       <section className="form-card">
         <div className="card-title"><span><Upload /></span><div><h3>Photos</h3><p>Upload up to five clear issue photos.</p></div></div>
@@ -337,10 +382,20 @@ function Report() {
 }
 
 function AuthPage({ mode }) {
-  const { login, register } = useAuth();
+  const { user, login, register } = useAuth();
   const nav = useNavigate();
+  const location = useLocation();
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const requestedRedirect = new URLSearchParams(location.search).get('redirect');
+  const redirectTo = requestedRedirect?.startsWith('/') && !requestedRedirect.startsWith('//')
+    ? requestedRedirect
+    : '/dashboard';
+
+  useEffect(() => {
+    if (user) nav(redirectTo, { replace: true });
+  }, [nav, redirectTo, user]);
+
   const submit = async e => {
     e.preventDefault(); setBusy(true); setError('');
     const form = new FormData(e.currentTarget);
@@ -350,7 +405,7 @@ function AuthPage({ mode }) {
         phone: form.get('phone'), ward: form.get('ward')
       });
       else await login(form.get('email'), form.get('password'));
-      nav('/dashboard');
+      nav(redirectTo, { replace: true });
     } catch (e) { setError(e.message); } finally { setBusy(false); }
   };
   const registering = mode === 'register';
@@ -375,7 +430,9 @@ function AuthPage({ mode }) {
 
 function Protected({ children }) {
   const { user } = useAuth();
-  return user ? children : <Navigate to="/login" replace />;
+  const location = useLocation();
+  const redirect = encodeURIComponent(`${location.pathname}${location.search}`);
+  return user ? children : <Navigate to={`/login?redirect=${redirect}`} replace />;
 }
 
 function AdminOnly({ children }) {
