@@ -22,7 +22,7 @@ const __dirname=path.dirname(fileURLToPath(import.meta.url));
 app.set('trust proxy',1);
 const allowedOrigins=(process.env.CLIENT_URL||'http://localhost:5173').split(',').map(x=>x.trim());
 app.use(helmet(),cors({
- origin(origin,callback){if(!origin||allowedOrigins.includes(origin))return callback(null,true);callback(new Error('Origin not allowed by CORS'))},
+ origin(origin,callback){if(!origin||process.env.NODE_ENV !== 'production'||allowedOrigins.includes(origin))return callback(null,true);callback(new Error('Origin not allowed by CORS'))},
  credentials:true
 }),express.json({limit:'2mb'}),sanitizeInput,morgan(process.env.NODE_ENV==='production'?'combined':'dev'));
 app.use('/uploads',express.static(path.join(__dirname,'uploads'),{maxAge:'7d'}));
