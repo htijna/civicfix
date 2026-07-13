@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="CivicFix">
+  <rect width="64" height="64" rx="16" fill="#176f58"/>
+  <rect x="18" y="15" width="28" height="38" rx="4" fill="none" stroke="#ffffff" stroke-width="4"/>
+  <path d="M25 24h14M25 32h14M25 40h14" fill="none" stroke="#ffffff" stroke-width="4" stroke-linecap="round"/>
+  <path d="M14 30h8v23h-8a4 4 0 0 1-4-4V34a4 4 0 0 1 4-4Zm28 8h8a4 4 0 0 1 4 4v7a4 4 0 0 1-4 4h-8V38Z" fill="none" stroke="#ffffff" stroke-width="4" stroke-linejoin="round"/>
+  <path d="M32 9v8" fill="none" stroke="#bfe8dc" stroke-width="4" stroke-linecap="round"/>
+</svg>
