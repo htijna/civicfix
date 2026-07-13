@@ -89,14 +89,7 @@ function Header() {
   const location = useLocation();
   const reportTo = user ? '/report' : '/login?redirect=/dashboard';
   const showUserControls = user && location.pathname === '/dashboard';
-  // Minimal header on report page
-  if (location.pathname === '/report') {
-    return (
-      <header className="report-header">
-        <Logo />
-      </header>
-    );
-  }
+
   return (
     <header>
       <Logo />
