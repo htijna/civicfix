@@ -86,28 +86,40 @@ function Logo() { // Log rendering of logo
 function Header() {
   const [open, setOpen] = useState(false);
   const { user } = useAuth();
+  const location = useLocation();
   const reportTo = user ? '/report' : '/login?redirect=/dashboard';
-  return <header>
-    <Logo />
-    <nav className={open ? 'open' : ''}>
-      <NavLink to="/">Home</NavLink>
-      <a href="/#how">How it works</a>
-      <a href="/#impact">Our impact</a>
-    </nav>
-    <div className="header-actions">
-      {user ? (
-        <>
-          <DarkModeToggle />
-          <NotificationPanel />
-          <Link to="/dashboard" className="text-btn">{user.name}</Link>
-        </>
-      ) : (
-        <Link to="/login" className="text-btn">Sign in</Link>
-      )}
-      <Link to={reportTo} className="primary small"><Plus size={17} />Report an issue</Link>
-      <button className="menu" onClick={() => setOpen(!open)} aria-label="Menu"><Menu /></button>
-    </div>
-  </header>;
+  const showUserControls = user && location.pathname === '/dashboard';
+  // Minimal header on report page
+  if (location.pathname === '/report') {
+    return (
+      <header className="report-header">
+        <Logo />
+      </header>
+    );
+  }
+  return (
+    <header>
+      <Logo />
+      <nav className={open ? 'open' : ''}>
+        <NavLink to="/">Home</NavLink>
+        <a href="#how">How it works</a>
+        <a href="#impact">Our impact</a>
+      </nav>
+      <div className="header-actions">
+        {showUserControls ? (
+          <>
+            <DarkModeToggle />
+            <NotificationPanel />
+            <Link to="/dashboard" className="text-btn">{user.name}</Link>
+          </>
+        ) : (
+          <Link to="/login" className="text-btn">Sign in</Link>
+        )}
+        <Link to={reportTo} className="primary small"><Plus size={17} />Report an issue</Link>
+        <button className="menu" onClick={() => setOpen(!open)} aria-label="Menu"><Menu /></button>
+      </div>
+    </header>
+  );
 }
 
 function Footer() {
@@ -181,24 +193,42 @@ function HomePage() {
   </main><Footer /></>;
 }
 
+// Updated MobileNav: minimal layout for /report page
 function MobileNav() {
   const { user, logout } = useAuth();
   const nav = useNavigate();
+  const location = useLocation();
+  // Minimal mobile nav on report page
+  if (location.pathname === '/report') {
+    return (
+      <div className="mobile-nav">
+        <Logo />
+      </div>
+    );
+  }
   const [open, setOpen] = useState(false);
-  return <div className="mobile-nav">
-    <Logo />
-    <div className="mobile-nav-icons">
-      <NotificationPanel />
-      <Link to="/profile"><User size={20} /></Link>
-      <button onClick={() => { logout(); nav('/'); }} aria-label="Logout" className="icon-btn"><LogOut size={20} /></button>
-      <button onClick={() => setOpen(!open)} aria-label="Menu" className="icon-btn"><Menu size={20} /></button>
+  const reportTo = user ? '/report' : '/login?redirect=/dashboard';
+  const showUserControls = user && location.pathname === '/dashboard';
+  return (
+    <div className="mobile-nav">
+      <Logo />
+      <div className="mobile-nav-icons">
+        {showUserControls && <NotificationPanel />}
+        {showUserControls && <Link to="/profile"><User size={20} /></Link>}
+        {showUserControls && <button onClick={() => { logout(); nav('/'); }} aria-label="Logout" className="icon-btn"><LogOut size={20} /></button>}
+        {!user && <Link to="/login" className="text-btn">Sign in</Link>}
+        <button onClick={() => setOpen(!open)} aria-label="Menu" className="icon-btn"><Menu size={20} /></button>
+      </div>
+      {open && (
+        <nav className="mobile-menu">
+          {user && <NavLink to="/dashboard" onClick={() => setOpen(false)}><LayoutDashboard />Dashboard</NavLink>}
+          {user?.role === 'admin' && <NavLink to="/admin" onClick={() => setOpen(false)}><ShieldCheck />Admin</NavLink>}
+          <NavLink to={reportTo} onClick={() => setOpen(false)}><Plus />Report an issue</NavLink>
+        </nav>
+      )}
     </div>
-    {open && <nav className="mobile-menu">
-      <NavLink to="/dashboard" onClick={() => setOpen(false)}><LayoutDashboard />Dashboard</NavLink>
-      {user?.role === 'admin' && <NavLink to="/admin" onClick={() => setOpen(false)}><ShieldCheck />Admin</NavLink>}
-      <NavLink to="/report" onClick={() => setOpen(false)}><Plus />Report an issue</NavLink>
-    </nav>}
-  </div>;
+  );
+}
 }
 
 function Sidebar() {
