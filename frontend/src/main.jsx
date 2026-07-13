@@ -9,14 +9,22 @@ ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode><BrowserRouter><App /><Toaster position="top-right" /></BrowserRouter></React.StrictMode>
 );
 
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.getRegistrations()
-    .then(registrations => Promise.all(registrations.map(registration => registration.unregister())))
-    .catch(() => {});
-}
+const clearLegacyOfflineCache = async () => {
+  if ('serviceWorker' in navigator) {
+    const registrations = await navigator.serviceWorker.getRegistrations();
+    await Promise.all(registrations.map(registration => registration.unregister()));
 
-if ('caches' in window) {
-  caches.keys()
-    .then(keys => Promise.all(keys.filter(key => key.startsWith('civicfix')).map(key => caches.delete(key))))
-    .catch(() => {});
-}
+    if (navigator.serviceWorker.controller && !sessionStorage.getItem('civicfix_sw_refresh')) {
+      sessionStorage.setItem('civicfix_sw_refresh', '1');
+      window.location.reload();
+      return;
+    }
+  }
+
+  if ('caches' in window) {
+    const keys = await caches.keys();
+    await Promise.all(keys.map(key => caches.delete(key)));
+  }
+};
+
+clearLegacyOfflineCache().catch(() => {});
