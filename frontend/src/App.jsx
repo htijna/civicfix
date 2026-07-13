@@ -72,12 +72,16 @@ function AuthProvider({ children }) {
 
 const useAuth = () => useContext(AuthContext);
 
-function Logo() { // Reload page on logo click to avoid stale cached layout
-  return <Link className="logo" to="/" onClick={() => window.location.reload()}>
-    <span className="logo-mark"><Building2 size={19} /></span>
-    <span>Civic<span>Fix</span></span>
-  </Link>;
+function Logo() { // Log rendering of logo
+  console.log('Logo rendered');
+  return (
+    <div className="logo">
+      <span className="logo-mark"><Building2 size={19} /></span>
+      <span>Civic<span>Fix</span></span>
+    </div>
+  );
 }
+
 
 function Header() {
   const [open, setOpen] = useState(false);
