@@ -192,28 +192,7 @@ function MobileNav() {
   const nav = useNavigate();
   const location = useLocation();
 
-  const [open, setOpen] = useState(false);
-  const reportTo = user ? '/report' : '/login?redirect=/dashboard';
-  const showUserControls = user && location.pathname === '/dashboard';
-  return (
-    <div className="mobile-nav">
-      <Logo />
-      <div className="mobile-nav-icons">
-        {showUserControls && <NotificationPanel />}
-        {showUserControls && <Link to="/profile"><User size={20} /></Link>}
-        {showUserControls && <button onClick={() => { logout(); nav('/'); }} aria-label="Logout" className="icon-btn"><LogOut size={20} /></button>}
-        {!user && <Link to="/login" className="text-btn">Sign in</Link>}
-        <button onClick={() => setOpen(!open)} aria-label="Menu" className="icon-btn"><Menu size={20} /></button>
-      </div>
-      {open && (
-        <nav className="mobile-menu">
-          {user && <NavLink to="/dashboard" onClick={() => setOpen(false)}><LayoutDashboard />Dashboard</NavLink>}
-          {user?.role === 'admin' && <NavLink to="/admin" onClick={() => setOpen(false)}><ShieldCheck />Admin</NavLink>}
-          <NavLink to={reportTo} onClick={() => setOpen(false)}><Plus />Report an issue</NavLink>
-        </nav>
-      )}
-    </div>
-  );
+  return <Header />;
 }
 }
 
