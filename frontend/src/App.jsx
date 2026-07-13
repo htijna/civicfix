@@ -72,8 +72,8 @@ function AuthProvider({ children }) {
 
 const useAuth = () => useContext(AuthContext);
 
-function Logo() {
-  return <Link className="logo" to="/">
+function Logo() { // Reload page on logo click to avoid stale cached layout
+  return <Link className="logo" to="/" onClick={() => window.location.reload()}>
     <span className="logo-mark"><Building2 size={19} /></span>
     <span>Civic<span>Fix</span></span>
   </Link>;
