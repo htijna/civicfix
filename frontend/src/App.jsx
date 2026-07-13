@@ -191,14 +191,7 @@ function MobileNav() {
   const { user, logout } = useAuth();
   const nav = useNavigate();
   const location = useLocation();
-  // Minimal mobile nav on report page
-  if (location.pathname === '/report') {
-    return (
-      <div className="mobile-nav">
-        <Logo />
-      </div>
-    );
-  }
+
   const [open, setOpen] = useState(false);
   const reportTo = user ? '/report' : '/login?redirect=/dashboard';
   const showUserControls = user && location.pathname === '/dashboard';
