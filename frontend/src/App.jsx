@@ -95,9 +95,15 @@ function Header() {
       <a href="/#impact">Our impact</a>
     </nav>
     <div className="header-actions">
-      {user && <DarkModeToggle />}
-      {user && <NotificationPanel />}
-      {user && <Link to="/dashboard" className="text-btn">{user.name}</Link>}
+      {user ? (
+        <>
+          <DarkModeToggle />
+          <NotificationPanel />
+          <Link to="/dashboard" className="text-btn">{user.name}</Link>
+        </>
+      ) : (
+        <Link to="/login" className="text-btn">Sign in</Link>
+      )}
       <Link to={reportTo} className="primary small"><Plus size={17} />Report an issue</Link>
       <button className="menu" onClick={() => setOpen(!open)} aria-label="Menu"><Menu /></button>
     </div>
