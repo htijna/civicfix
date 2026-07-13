@@ -171,6 +171,26 @@ function HomePage() {
   </main><Footer /></>;
 }
 
+function MobileNav() {
+  const { user, logout } = useAuth();
+  const nav = useNavigate();
+  const [open, setOpen] = useState(false);
+  return <div className="mobile-nav">
+    <Logo />
+    <div className="mobile-nav-icons">
+      <NotificationPanel />
+      <Link to="/profile"><User size={20} /></Link>
+      <button onClick={() => { logout(); nav('/'); }} aria-label="Logout" className="icon-btn"><LogOut size={20} /></button>
+      <button onClick={() => setOpen(!open)} aria-label="Menu" className="icon-btn"><Menu size={20} /></button>
+    </div>
+    {open && <nav className="mobile-menu">
+      <NavLink to="/dashboard" onClick={() => setOpen(false)}><LayoutDashboard />Dashboard</NavLink>
+      {user?.role === 'admin' && <NavLink to="/admin" onClick={() => setOpen(false)}><ShieldCheck />Admin</NavLink>}
+      <NavLink to="/report" onClick={() => setOpen(false)}><Plus />Report an issue</NavLink>
+    </nav>}
+  </div>;
+}
+
 function Sidebar() {
   const { user, logout } = useAuth();
   const initials = user?.name?.split(' ').map(x => x[0]).join('').slice(0, 2).toUpperCase() || 'CF';
@@ -232,7 +252,7 @@ function Dashboard() {
     return buckets;
   }, [complaints]);
 
-  return <div className="app-shell"><Sidebar /><div className="dashboard">
+  return <div className="app-shell"><MobileNav /><Sidebar /><div className="dashboard">
     <div className="dash-top">
       <div><h1>Hello, {user.name}</h1><p>Live data from your civic complaints.</p></div>
       <div className="dash-actions">
