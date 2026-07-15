@@ -16,7 +16,7 @@ import Header from '../components/Header';
 import Footer from '../components/Footer';
 import { api as request } from '../services/api';
 
-const reportTo = '/login?redirect=/report';
+const reportTo = '/login?redirect=/dashboard';
 
 export default function HomePage() {
   const [stats, setStats] = useState({

@@ -11,7 +11,7 @@ export default function Footer() {
       <div>
         <b>Platform</b>
         <a href="/#how">How it works</a>
-        <Link to="/login?redirect=/report">Report issue</Link>
+        <Link to="/login?redirect=/dashboard">Report issue</Link>
         <Link to="/dashboard">Track complaint</Link>
       </div>
       <div>

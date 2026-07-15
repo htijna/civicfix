@@ -15,7 +15,7 @@ export default function Header() {
         <a href="#impact">Our impact</a>
       </nav>
       <div className="header-actions">
-        <Link to="/login?redirect=/report" className="primary small"><Plus size={17} />Report an issue</Link>
+        <Link to="/login?redirect=/dashboard" className="primary small"><Plus size={17} />Report an issue</Link>
         <button className="menu" onClick={() => setOpen(!open)} aria-label="Menu"><Menu /></button>
       </div>
     </header>
