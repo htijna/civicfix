@@ -1,8 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowRight, Check, FileText, MapPin } from 'lucide-react';
-import Footer from '../components/Footer';
-import Header from '../components/Header';
+import AuthenticatedShell from '../components/AuthenticatedShell';
 import IssuePhotoUploader from '../components/IssuePhotoUploader';
 import MapPicker from '../components/MapPicker';
 import { api as request } from '../services/api';
@@ -103,12 +102,15 @@ export default function Report() {
   };
 
   if (reference) {
-    return <div className="success-page"><span><Check /></span><h1>Complaint submitted</h1><p>Your tracking number is <b>{reference}</b></p><p>Taking you to your dashboard...</p></div>;
+    return (
+      <AuthenticatedShell title="Complaint submitted" subtitle="Your report is saved and ready to track.">
+        <div className="success-page"><span><Check /></span><h1>Complaint submitted</h1><p>Your tracking number is <b>{reference}</b></p><p>Taking you to your dashboard...</p></div>
+      </AuthenticatedShell>
+    );
   }
 
   return (
-    <>
-      <Header />
+    <AuthenticatedShell title="Report a civic issue" subtitle="This form creates a real complaint in MongoDB.">
       <main className="form-page">
         <div className="form-title"><div><span className="back" onClick={() => nav(-1)}>Back</span><h1>Report a civic issue</h1><p>This form creates a real complaint in MongoDB.</p></div></div>
         <form onSubmit={submit} className="report-form">
@@ -133,7 +135,6 @@ export default function Report() {
           <div className="form-bottom"><label className="check"><input name="anonymous" type="checkbox" /> Submit anonymously</label><button disabled={busy} className="primary">{busy ? 'Submitting...' : 'Submit complaint'} <ArrowRight /></button></div>
         </form>
       </main>
-      <Footer />
-    </>
+    </AuthenticatedShell>
   );
 }

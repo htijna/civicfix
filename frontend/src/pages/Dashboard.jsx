@@ -1,15 +1,13 @@
 import { useEffect, useMemo, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import {
   Bell,
   CheckCircle2,
   Clock3,
   FileText,
-  LogOut,
   MapPin,
   Plus,
   Search,
-  User
 } from 'lucide-react';
 import {
   Area,
@@ -20,12 +18,9 @@ import {
   XAxis,
   YAxis
 } from 'recharts';
-import DarkModeToggle from '../components/DarkModeToggle';
-import MobileNav from '../components/MobileNav';
-import NotificationPanel from '../components/NotificationPanel';
-import Sidebar from '../components/Sidebar';
 import { useAuth } from '../context/AuthContext';
 import { api as request } from '../services/api';
+import AuthenticatedShell from '../components/AuthenticatedShell';
 
 const categoryColors = {
   'Damaged Road': '#d85c41',
@@ -44,8 +39,7 @@ function Metric({ icon: Icon, n, label, note, c }) {
 }
 
 export default function Dashboard() {
-  const { user, logout } = useAuth();
-  const nav = useNavigate();
+  const { user } = useAuth();
   const [complaints, setComplaints] = useState([]);
   const [query, setQuery] = useState('');
   const [loading, setLoading] = useState(true);
@@ -82,21 +76,11 @@ export default function Dashboard() {
   }, [complaints]);
 
   return (
-    <div className="app-shell">
-      <MobileNav />
-      <Sidebar />
-      <div className="dashboard">
-        <div className="dash-top">
-          <div><h1>Hello, {user.name}</h1><p>Live data from your civic complaints.</p></div>
-          <div className="dash-actions">
-            <span className="dash-user"><User size={17} />{user.name}</span>
-            <DarkModeToggle />
-            <NotificationPanel />
-            <Link className="secondary dash-profile" to="/profile"><User size={17} />Profile</Link>
-            <button className="secondary dash-logout" onClick={() => { logout(); nav('/'); }}><LogOut size={17} />Logout</button>
-            <Link className="primary" to="/report"><Plus />New complaint</Link>
-          </div>
-        </div>
+    <AuthenticatedShell
+      title={`Hello, ${user.name}`}
+      subtitle="Live data from your civic complaints."
+      action={<Link className="primary" to="/report"><Plus />New complaint</Link>}
+    >
         {error && <p className="form-error">{error}</p>}
         <div className="metric-grid">
           <Metric icon={FileText} n={complaints.length} label="Total complaints" note="All submitted reports" c="green" />
@@ -149,7 +133,6 @@ export default function Dashboard() {
             {!loading && !shown.length && <p className="empty-state">No complaints found. Submit your first report to create one.</p>}
           </div>
         </section>
-      </div>
-    </div>
+    </AuthenticatedShell>
   );
 }
