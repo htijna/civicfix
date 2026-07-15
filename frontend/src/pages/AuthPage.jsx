@@ -37,6 +37,7 @@ export default function AuthPage({ mode }) {
       } else {
         await login(form.get('email'), form.get('password'));
       }
+      nav(redirectTo, { replace: true });
     } catch (e) {
       setError(e.message);
     } finally {
