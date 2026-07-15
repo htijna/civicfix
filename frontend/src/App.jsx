@@ -10,10 +10,11 @@ import Profile from './pages/Profile';
 import Report from './pages/Report';
 
 function Protected({ children }) {
-  const { user } = useAuth();
+  const { user, authReady } = useAuth();
   const location = useLocation();
   const redirect = encodeURIComponent(`${location.pathname}${location.search}`);
 
+  if (!authReady) return null;
   return user ? children : <Navigate to={`/login?redirect=${redirect}`} replace />;
 }
 

@@ -5,7 +5,7 @@ import Logo from '../components/Logo';
 import { useAuth } from '../context/AuthContext';
 
 export default function AuthPage({ mode }) {
-  const { user, login, register } = useAuth();
+  const { user, authReady, login, register } = useAuth();
   const nav = useNavigate();
   const location = useLocation();
   const [error, setError] = useState('');
@@ -16,8 +16,8 @@ export default function AuthPage({ mode }) {
     : '/dashboard';
 
   useEffect(() => {
-    if (user) nav(redirectTo, { replace: true });
-  }, [nav, redirectTo, user]);
+    if (authReady && user) nav(redirectTo, { replace: true });
+  }, [authReady, nav, redirectTo, user]);
 
   const submit = async e => {
     e.preventDefault();
@@ -37,7 +37,6 @@ export default function AuthPage({ mode }) {
       } else {
         await login(form.get('email'), form.get('password'));
       }
-      nav(redirectTo, { replace: true });
     } catch (e) {
       setError(e.message);
     } finally {

@@ -31,7 +31,7 @@ export async function api(path, options = {}) {
       : { message: await response.text() };
 
   if (response.status === 401 && path !== '/auth/login') {
-    clearStoredSession();
+    if (localStorage.getItem('civicfix_token') === token) clearStoredSession();
     throw new Error('Your session expired. Please sign in again.');
   }
   if (!response.ok) throw new Error(data?.message || `Request failed (${response.status})`);
