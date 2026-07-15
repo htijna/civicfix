@@ -72,7 +72,7 @@ function validateFiles(files, currentCount) {
 }
 
 function CropModal({ file, onSave, onCancel }) {
-  const [imageUrl, setImageUrl] = useState('');
+  const imageUrl = useMemo(() => URL.createObjectURL(file), [file]);
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
   const [rotation, setRotation] = useState(0);
@@ -81,10 +81,8 @@ function CropModal({ file, onSave, onCancel }) {
   const titleId = useId();
 
   useEffect(() => {
-    const url = URL.createObjectURL(file);
-    setImageUrl(url);
-    return () => URL.revokeObjectURL(url);
-  }, [file]);
+    return () => URL.revokeObjectURL(imageUrl);
+  }, [imageUrl]);
 
   const save = async () => {
     if (!croppedArea) return;

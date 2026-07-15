@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { jsPDF } from 'jspdf';
 import toast from 'react-hot-toast';
@@ -10,16 +10,28 @@ export default function AdminDashboard() {
   const [complaints, setComplaints] = useState([]); const [summary, setSummary] = useState({ byStatus: {}, monthly: [] });
   const [departments, setDepartments] = useState([]); const [assignees, setAssignees] = useState([]);
   const [filters, setFilters] = useState({ search: '', status: '', priority: '', ward: '' });
-  const load = async () => {
+  const load = useCallback(async () => {
     const query = new URLSearchParams(Object.entries(filters).filter(([, value]) => value)).toString();
     const [list, stats] = await Promise.all([api(`/complaints?${query}`), api('/complaints/admin/summary')]);
     setComplaints(list.complaints); setSummary(stats);
-  };
+  }, [filters]);
+
   useEffect(() => {
-    load().catch(error => toast.error(error.message));
-    Promise.all([api('/departments'), api('/users/assignees')]).then(([d, u]) => {
-      setDepartments(d.departments || []); setAssignees(u.users || []);
-    }).catch(() => {});
+    const loadInitial = async () => {
+      const [list, stats, d, u] = await Promise.all([
+        api('/complaints'),
+        api('/complaints/admin/summary'),
+        api('/departments'),
+        api('/users/assignees')
+      ]);
+
+      setComplaints(list.complaints);
+      setSummary(stats);
+      setDepartments(d.departments || []);
+      setAssignees(u.users || []);
+    };
+
+    loadInitial().catch(error => toast.error(error.message));
   }, []);
   const chart = useMemo(() => Object.entries(summary.byStatus || {}).map(([name, value]) => ({ name, value })), [summary]);
   const update = async (id, values) => { await api(`/complaints/${id}`, { method: 'PUT', body: JSON.stringify(values) }); toast.success('Complaint updated'); load(); };

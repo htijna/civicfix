@@ -13,11 +13,14 @@ function ClickPicker({ value, onChange }) {
 
 function MapCenter({ value }) {
   const map = useMap();
+  const { latitude, longitude } = value;
+
   useEffect(() => {
-    if (hasCoordinates(value)) {
-      map.flyTo([value.latitude, value.longitude], 15, { duration: 0.7 });
+    if (Number.isFinite(latitude) && Number.isFinite(longitude)) {
+      map.flyTo([latitude, longitude], 15, { duration: 0.7 });
     }
-  }, [map, value.latitude, value.longitude]);
+  }, [latitude, longitude, map]);
+
   return null;
 }
 
