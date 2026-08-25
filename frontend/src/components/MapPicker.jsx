@@ -62,6 +62,7 @@ export default function MapPicker({ value, onChange, markers = [] }) {
     );
   };
   const center = hasCoordinates(value) ? [value.latitude, value.longitude] : [10.8505, 76.2711];
+
   return <div className="map-box">
     <MapContainer center={center} zoom={hasCoordinates(value) ? 15 : 7} scrollWheelZoom>
       <TileLayer attribution="&copy; OpenStreetMap contributors" url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />

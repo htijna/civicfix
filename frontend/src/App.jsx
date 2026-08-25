@@ -9,13 +9,13 @@ import { ForgotPassword, ResetPassword } from './pages/PasswordPages';
 import Profile from './pages/Profile';
 import Report from './pages/Report';
 
-function Protected({ children }) {
+function Protected({ children, loginPath = '/login' }) {
   const { user, authReady } = useAuth();
   const location = useLocation();
   const redirect = encodeURIComponent(`${location.pathname}${location.search}`);
 
   if (!authReady) return null;
-  return user ? children : <Navigate to={`/login?redirect=${redirect}`} replace />;
+  return user ? children : <Navigate to={`${loginPath}?redirect=${redirect}`} replace />;
 }
 
 function AdminOnly({ children }) {
@@ -30,6 +30,7 @@ export default function App() {
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/login" element={<AuthPage mode="login" />} />
+        <Route path="/admin-login" element={<AuthPage mode="admin" />} />
         <Route path="/register" element={<AuthPage mode="register" />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password/:token" element={<ResetPassword />} />
@@ -37,7 +38,7 @@ export default function App() {
         <Route path="/report" element={<Protected><Report /></Protected>} />
         <Route path="/profile" element={<Protected><Profile /></Protected>} />
         <Route path="/complaints/:id" element={<Protected><ComplaintDetails /></Protected>} />
-        <Route path="/admin" element={<Protected><AdminOnly><AdminDashboard /></AdminOnly></Protected>} />
+        <Route path="/admin" element={<Protected loginPath="/admin-login"><AdminOnly><AdminDashboard /></AdminOnly></Protected>} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </AuthProvider>

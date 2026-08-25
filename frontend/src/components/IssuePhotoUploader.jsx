@@ -16,36 +16,56 @@ const formatSize = bytes => {
 const loadImage = src => new Promise((resolve, reject) => {
   const image = new Image();
   image.addEventListener('load', () => resolve(image));
-  image.addEventListener('error', reject);
-  image.crossOrigin = 'anonymous';
+  image.addEventListener('error', err => reject(err));
+  if (!src.startsWith('blob:')) {
+    image.crossOrigin = 'anonymous';
+  }
   image.src = src;
 });
 
+function rotateSize(width, height, rotation) {
+  const rotRad = (rotation * Math.PI) / 180;
+  return {
+    width: Math.abs(Math.cos(rotRad) * width) + Math.abs(Math.sin(rotRad) * height),
+    height: Math.abs(Math.sin(rotRad) * width) + Math.abs(Math.cos(rotRad) * height)
+  };
+}
+
 async function cropImage(imageSrc, cropPixels, rotation = 0, fileName = 'issue-photo.jpg', fileType = 'image/jpeg') {
   const image = await loadImage(imageSrc);
-  const radians = rotation * Math.PI / 180;
-  const sin = Math.abs(Math.sin(radians));
-  const cos = Math.abs(Math.cos(radians));
-  const rotatedWidth = image.width * cos + image.height * sin;
-  const rotatedHeight = image.width * sin + image.height * cos;
-  const canvas = document.createElement('canvas');
-  const context = canvas.getContext('2d');
+  const rotRad = (rotation * Math.PI) / 180;
+  const { width: bBoxWidth, height: bBoxHeight } = rotateSize(image.width, image.height, rotation);
 
-  canvas.width = rotatedWidth;
-  canvas.height = rotatedHeight;
-  context.translate(rotatedWidth / 2, rotatedHeight / 2);
-  context.rotate(radians);
-  context.translate(-image.width / 2, -image.height / 2);
-  context.drawImage(image, 0, 0);
+  const rotCanvas = document.createElement('canvas');
+  const rotCtx = rotCanvas.getContext('2d');
+  rotCanvas.width = Math.round(bBoxWidth);
+  rotCanvas.height = Math.round(bBoxHeight);
 
-  const data = context.getImageData(cropPixels.x, cropPixels.y, cropPixels.width, cropPixels.height);
-  canvas.width = cropPixels.width;
-  canvas.height = cropPixels.height;
-  context.putImageData(data, 0, 0);
+  rotCtx.translate(bBoxWidth / 2, bBoxHeight / 2);
+  rotCtx.rotate(rotRad);
+  rotCtx.translate(-image.width / 2, -image.height / 2);
+  rotCtx.drawImage(image, 0, 0);
 
-  const blob = await new Promise(resolve => canvas.toBlob(resolve, fileType, 0.92));
+  const cropCanvas = document.createElement('canvas');
+  const cropCtx = cropCanvas.getContext('2d');
+
+  const width = Math.max(1, Math.round(cropPixels?.width || bBoxWidth));
+  const height = Math.max(1, Math.round(cropPixels?.height || bBoxHeight));
+  const x = Math.round(cropPixels?.x || 0);
+  const y = Math.round(cropPixels?.y || 0);
+
+  cropCanvas.width = width;
+  cropCanvas.height = height;
+
+  cropCtx.drawImage(rotCanvas, x, y, width, height, 0, 0, width, height);
+
+  const normalizedType = (fileType === 'image/jpg' || !fileType) ? 'image/jpeg' : fileType;
+  const ext = normalizedType === 'image/png' ? '.png' : normalizedType === 'image/webp' ? '.webp' : '.jpg';
+  const cleanName = fileName.replace(/\.[^.]+$/, '') + '-cropped' + ext;
+
+  const blob = await new Promise(resolve => cropCanvas.toBlob(resolve, normalizedType, 0.92));
   if (!blob) throw new Error('Could not crop the selected image.');
-  return new File([blob], fileName.replace(/\.[^.]+$/, '') + '-cropped.jpg', { type: fileType, lastModified: Date.now() });
+  return new File([blob], cleanName, { type: normalizedType, lastModified: Date.now() });
 }
 
 function validateFiles(files, currentCount) {
@@ -85,13 +105,15 @@ function CropModal({ file, onSave, onCancel }) {
   }, [imageUrl]);
 
   const save = async () => {
-    if (!croppedArea) return;
     setBusy(true);
+    let croppedFile = file;
     try {
-      const cropped = await cropImage(imageUrl, croppedArea, rotation, file.name, file.type || 'image/jpeg');
-      onSave(cropped);
+      croppedFile = await cropImage(imageUrl, croppedArea, rotation, file.name, file.type || 'image/jpeg');
+    } catch (err) {
+      console.warn('Cropping error, using original file instead:', err);
     } finally {
       setBusy(false);
+      onSave(croppedFile);
     }
   };
 
@@ -121,7 +143,7 @@ function CropModal({ file, onSave, onCancel }) {
       </div>
       <div className="crop-actions">
         <button type="button" className="secondary" onClick={onCancel}><X size={17} />Cancel</button>
-        <button type="button" className="primary" onClick={save} disabled={busy}><Crop size={17} />{busy ? 'Saving...' : 'Crop & Save'}</button>
+        <button type="button" className="primary" onClick={save} disabled={busy}><Check size={17} />{busy ? 'Saving...' : 'OK'}</button>
       </div>
     </div>
   </div>;

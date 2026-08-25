@@ -51,6 +51,15 @@ export function AuthProvider({ children }) {
     setUser(data.user);
   };
 
+  const adminLogin = async (email, password) => {
+    const data = await request('/auth/admin/login', {
+      method: 'POST', body: JSON.stringify({ email, password })
+    });
+    localStorage.setItem('civicfix_token', data.token);
+    localStorage.setItem('civicfix_user', JSON.stringify(data.user));
+    setUser(data.user);
+  };
+
   const register = async values => {
     const data = await request('/auth/register', {
       method: 'POST', body: JSON.stringify(values)
@@ -66,7 +75,7 @@ export function AuthProvider({ children }) {
     setUser(null);
   };
 
-  return <AuthContext.Provider value={{ user, authReady, login, register, logout }}>{children}</AuthContext.Provider>;
+  return <AuthContext.Provider value={{ user, authReady, login, adminLogin, register, logout }}>{children}</AuthContext.Provider>;
 }
 
 export const useAuth = () => useContext(AuthContext);

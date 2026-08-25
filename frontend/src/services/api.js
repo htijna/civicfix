@@ -1,5 +1,8 @@
-export const API = import.meta.env.VITE_API_URL
-  || (import.meta.env.DEV ? 'http://127.0.0.1:5000/api' : 'https://civicfix-vvrx.onrender.com/api');
+const isLocalHost = ['localhost', '127.0.0.1'].includes(window.location.hostname);
+
+export const API = isLocalHost
+  ? 'http://127.0.0.1:5000/api'
+  : import.meta.env.VITE_API_URL || 'https://civicfix-vvrx.onrender.com/api';
 
 function clearStoredSession() {
   localStorage.removeItem('civicfix_token');

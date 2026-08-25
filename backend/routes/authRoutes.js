@@ -40,6 +40,20 @@ router.post('/login', [
   } catch (error) { next(error); }
 });
 
+router.post('/admin/login', [
+  body('email').isEmail().normalizeEmail(),
+  body('password').notEmpty(),
+  validate
+], async (req, res, next) => {
+  try {
+    const user = await User.findOne({ email: req.body.email }).select('+password');
+    if (!user || !await user.verifyPassword(req.body.password)) return res.status(401).json({ message: 'Invalid email or password' });
+    if (user.role !== 'admin') return res.status(403).json({ message: 'This login is only for administrators' });
+    await ActivityLog.create({ user: user.id, action: 'ADMIN_LOGIN', entity: 'User', entityId: user.id, ip: req.ip });
+    res.json({ token: token(user.id), user: publicUser(user) });
+  } catch (error) { next(error); }
+});
+
 router.post('/forgot-password', [body('email').isEmail().normalizeEmail(), validate], async (req, res, next) => {
   try {
     const user = await User.findOne({ email: req.body.email });

@@ -5,19 +5,21 @@ import Logo from '../components/Logo';
 import { useAuth } from '../context/AuthContext';
 
 export default function AuthPage({ mode }) {
-  const { user, authReady, login, register } = useAuth();
+  const { user, authReady, login, adminLogin, register } = useAuth();
   const nav = useNavigate();
   const location = useLocation();
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const requestedRedirect = new URLSearchParams(location.search).get('redirect');
+  const isAdminLogin = mode === 'admin';
   const redirectTo = requestedRedirect?.startsWith('/') && !requestedRedirect.startsWith('//')
     ? requestedRedirect
-    : '/dashboard';
+    : isAdminLogin ? '/admin' : '/dashboard';
 
   useEffect(() => {
-    if (authReady && user) nav(redirectTo, { replace: true });
-  }, [authReady, nav, redirectTo, user]);
+    if (!authReady || !user) return;
+    nav(isAdminLogin && user.role !== 'admin' ? '/dashboard' : redirectTo, { replace: true });
+  }, [authReady, isAdminLogin, nav, redirectTo, user]);
 
   const submit = async e => {
     e.preventDefault();
@@ -35,7 +37,8 @@ export default function AuthPage({ mode }) {
           ward: form.get('ward')
         });
       } else {
-        await login(form.get('email'), form.get('password'));
+        if (isAdminLogin) await adminLogin(form.get('email'), form.get('password'));
+        else await login(form.get('email'), form.get('password'));
       }
       nav(redirectTo, { replace: true });
     } catch (e) {
@@ -46,6 +49,12 @@ export default function AuthPage({ mode }) {
   };
 
   const registering = mode === 'register';
+  const title = registering ? 'Create your account' : isAdminLogin ? 'Admin login' : 'Welcome back';
+  const subtitle = registering
+    ? 'Register as a citizen to report issues.'
+    : isAdminLogin
+      ? 'Sign in as an administrator to review submitted complaints.'
+      : 'Sign in to see your real complaint data.';
 
   return (
     <div className="login-page">
@@ -60,8 +69,8 @@ export default function AuthPage({ mode }) {
       </div>
       <div className="login-box">
         <div>
-          <h2>{registering ? 'Create your account' : 'Welcome back'}</h2>
-          <p>{registering ? 'Register as a citizen to report issues.' : 'Sign in to see your real complaint data.'}</p>
+          <h2>{title}</h2>
+          <p>{subtitle}</p>
           <form onSubmit={submit}>
             {registering && (
               <>
@@ -73,10 +82,14 @@ export default function AuthPage({ mode }) {
             <label>Password<input name="password" required type="password" minLength="8" placeholder="Minimum 8 characters" /></label>
             {!registering && <Link className="forgot-link" to="/forgot-password">Forgot password?</Link>}
             {error && <p className="form-error">{error}</p>}
-            <button disabled={busy} className="primary login-submit">{busy ? 'Please wait...' : registering ? 'Create account' : 'Sign in'} <ArrowRight /></button>
+            <button disabled={busy} className="primary login-submit">{busy ? 'Please wait...' : registering ? 'Create account' : isAdminLogin ? 'Enter admin dashboard' : 'Sign in'} <ArrowRight /></button>
           </form>
-          <p className="register">{registering ? <>Already registered? <Link to="/login">Sign in</Link></> : <>New to CivicFix? <Link to="/register">Create an account</Link></>}</p>
-          <div className="demo"><ShieldCheck /><span><b>Live authentication</b><small>No demo credentials or simulated login.</small></span></div>
+          <p className="register">
+            {registering && <>Already registered? <Link to="/login">Sign in</Link></>}
+            {!registering && !isAdminLogin && <>New to CivicFix? <Link to="/register">Create an account</Link> · <Link to="/admin-login">Admin login</Link></>}
+            {isAdminLogin && <>Citizen account? <Link to="/login">Use citizen login</Link></>}
+          </p>
+          <div className="demo"><ShieldCheck /><span><b>{isAdminLogin ? 'Admin-only access' : 'Live authentication'}</b><small>{isAdminLogin ? 'Only accounts with the admin role can enter this portal.' : 'No demo credentials or simulated login.'}</small></span></div>
         </div>
       </div>
     </div>

@@ -12,6 +12,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const uploadDir = path.resolve(__dirname, '..', 'uploads');
 const allowedTypes = new Map([
   ['image/jpeg', '.jpg'],
+  ['image/jpg', '.jpg'],
   ['image/png', '.png'],
   ['image/webp', '.webp']
 ]);

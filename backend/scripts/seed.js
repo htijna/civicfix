@@ -9,7 +9,15 @@ await Department.bulkWrite([
 ].map(name => ({ updateOne: { filter: { name }, update: { $setOnInsert: { name, active: true } }, upsert: true } })));
 if (process.env.SEED_ADMIN_EMAIL && process.env.SEED_ADMIN_PASSWORD) {
   const email = process.env.SEED_ADMIN_EMAIL.toLowerCase();
-  if (!await User.exists({ email })) await User.create({ name: 'CivicFix Administrator', email, password: process.env.SEED_ADMIN_PASSWORD, role: 'admin' });
+  const admin = await User.findOne({ email }).select('+password');
+  if (admin) {
+    admin.name = admin.name || 'CivicFix Administrator';
+    admin.password = process.env.SEED_ADMIN_PASSWORD;
+    admin.role = 'admin';
+    await admin.save();
+  } else {
+    await User.create({ name: 'CivicFix Administrator', email, password: process.env.SEED_ADMIN_PASSWORD, role: 'admin' });
+  }
 }
 console.log('Seed completed');
 await mongoose.disconnect();
