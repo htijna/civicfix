@@ -10,7 +10,7 @@ import { sendMail } from '../services/mailService.js';
 
 const router = Router();
 const token = id => jwt.sign({ id }, process.env.JWT_SECRET || 'development-secret-change-me', { expiresIn: '7d' });
-const publicUser = user => ({ id: user.id, name: user.name, email: user.email, role: user.role, phone: user.phone, address: user.address, ward: user.ward, avatar: user.avatar, language: user.language });
+const publicUser = user => ({ id: user.id, name: user.name, email: user.email, role: user.role, department: user.department, active: user.active, phone: user.phone, address: user.address, ward: user.ward, avatar: user.avatar, language: user.language });
 
 router.post('/register', [
   body('name').trim().isLength({ min: 2, max: 80 }),
@@ -35,6 +35,7 @@ router.post('/login', [
   try {
     const user = await User.findOne({ email: req.body.email }).select('+password');
     if (!user || !await user.verifyPassword(req.body.password)) return res.status(401).json({ message: 'Invalid email or password' });
+    if (user.active === false) return res.status(403).json({ message: 'Account is inactive' });
     await ActivityLog.create({ user: user.id, action: 'LOGIN', entity: 'User', entityId: user.id, ip: req.ip });
     res.json({ token: token(user.id), user: publicUser(user) });
   } catch (error) { next(error); }
@@ -48,6 +49,7 @@ router.post('/admin/login', [
   try {
     const user = await User.findOne({ email: req.body.email }).select('+password');
     if (!user || !await user.verifyPassword(req.body.password)) return res.status(401).json({ message: 'Invalid email or password' });
+    if (user.active === false) return res.status(403).json({ message: 'Account is inactive' });
     if (user.role !== 'admin') return res.status(403).json({ message: 'This login is only for administrators' });
     await ActivityLog.create({ user: user.id, action: 'ADMIN_LOGIN', entity: 'User', entityId: user.id, ip: req.ip });
     res.json({ token: token(user.id), user: publicUser(user) });

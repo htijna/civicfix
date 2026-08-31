@@ -8,6 +8,10 @@ router.get('/', async (_req, res, next) => {
   try { res.json({ departments: await Department.find({ active: true }).sort('name') }); }
   catch (error) { next(error); }
 });
+router.get('/admin/all', allow('admin'), async (_req, res, next) => {
+  try { res.json({ departments: await Department.find().sort('name') }); }
+  catch (error) { next(error); }
+});
 router.post('/', allow('admin'), async (req, res, next) => {
   try { res.status(201).json({ department: await Department.create(req.body) }); }
   catch (error) { next(error); }

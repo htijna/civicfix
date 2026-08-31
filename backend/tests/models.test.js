@@ -11,5 +11,5 @@ test('user requires a valid minimum-length password', () => {
 
 test('complaint accepts all workflow statuses', () => {
   const allowed = Complaint.schema.path('status').enumValues;
-  assert.deepEqual(allowed, ['Submitted', 'Under Review', 'Assigned', 'In Progress', 'Resolved', 'Rejected']);
+  assert.deepEqual(allowed, ['Submitted', 'Under Review', 'Assigned', 'Accepted', 'In Progress', 'Resolution Submitted', 'Resolved', 'Rejected', 'Exception']);
 });

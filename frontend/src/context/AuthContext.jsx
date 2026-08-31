@@ -49,6 +49,7 @@ export function AuthProvider({ children }) {
     localStorage.setItem('civicfix_token', data.token);
     localStorage.setItem('civicfix_user', JSON.stringify(data.user));
     setUser(data.user);
+    return data.user;
   };
 
   const adminLogin = async (email, password) => {
@@ -58,6 +59,7 @@ export function AuthProvider({ children }) {
     localStorage.setItem('civicfix_token', data.token);
     localStorage.setItem('civicfix_user', JSON.stringify(data.user));
     setUser(data.user);
+    return data.user;
   };
 
   const register = async values => {
@@ -67,6 +69,7 @@ export function AuthProvider({ children }) {
     localStorage.setItem('civicfix_token', data.token);
     localStorage.setItem('civicfix_user', JSON.stringify(data.user));
     setUser(data.user);
+    return data.user;
   };
 
   const logout = () => {

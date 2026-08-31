@@ -5,6 +5,7 @@ const schema = new mongoose.Schema({
   description: String,
   ward: String,
   email: String,
+  categories: [{ type: String, trim: true }],
   active: { type: Boolean, default: true }
 }, { timestamps: true });
 

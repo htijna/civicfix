@@ -5,14 +5,23 @@ import ActivityLog from '../models/ActivityLog.js';
 import { protect, allow } from '../middleware/authMiddleware.js';
 import { validate } from '../middleware/validate.js';
 import { notify } from '../services/notificationService.js';
+import { routeComplaint } from '../services/aiRoutingService.js';
 
 const router = Router();
 router.use(protect);
 
 router.get('/', async (req, res, next) => {
   try {
-    const query = req.user.role === 'admin' ? {} : { createdBy: req.user.id };
-    for (const key of ['status', 'category', 'priority', 'department']) if (req.query[key]) query[key] = req.query[key];
+    if (req.user.role === 'department' && !req.user.department) return res.status(403).json({ message: 'Department account is not linked to a department' });
+    const query = req.user.role === 'admin'
+      ? {}
+      : req.user.role === 'department'
+        ? { department: req.user.department }
+        : { createdBy: req.user.id };
+    const filterKeys = req.user.role === 'department'
+      ? ['status', 'category', 'priority', 'severity']
+      : ['status', 'category', 'priority', 'severity', 'department'];
+    for (const key of filterKeys) if (req.query[key]) query[key] = req.query[key];
     if (req.query.ward) query['location.ward'] = req.query.ward;
     if (req.query.from || req.query.to) {
       query.createdAt = {};
@@ -24,7 +33,7 @@ router.get('/', async (req, res, next) => {
     const limit = Math.min(Math.max(Number(req.query.limit) || 50, 1), 100);
     const [data, count] = await Promise.all([
       Complaint.find(query).sort('-createdAt').skip((page - 1) * limit).limit(limit)
-        .populate('createdBy', 'name avatar').populate('assignedTo', 'name').populate('department', 'name'),
+        .populate('createdBy', 'name email phone avatar').populate('assignedTo', 'name').populate('department', 'name'),
       Complaint.countDocuments(query)
     ]);
     res.json({ count, page, pages: Math.ceil(count / limit), complaints: data });
@@ -34,38 +43,55 @@ router.get('/', async (req, res, next) => {
 router.post('/', [
   body('title').trim().isLength({ min: 5, max: 120 }),
   body('description').trim().isLength({ min: 10, max: 3000 }),
-  body('category').notEmpty(),
   body('location.address').trim().notEmpty(),
   validate
 ], async (req, res, next) => {
   try {
     const complaint = await Complaint.create({ ...req.body, createdBy: req.user.id });
+    const routedComplaint = await routeComplaint(complaint);
     await Promise.all([
-      notify(req.user.id, `Complaint ${complaint.reference} was submitted`, 'submitted', complaint.id),
+      notify(req.user.id, `Complaint ${routedComplaint.reference} was submitted`, 'submitted', routedComplaint.id),
       ActivityLog.create({ user: req.user.id, action: 'CREATE_COMPLAINT', entity: 'Complaint', entityId: complaint.id, ip: req.ip })
     ]);
-    res.status(201).json({ complaint });
+    res.status(201).json({ complaint: routedComplaint });
   } catch (error) { next(error); }
 });
 
 router.get('/admin/summary', allow('admin'), async (req, res, next) => {
   try {
-    const [grouped, priorities, monthly, departments, total] = await Promise.all([
+    const [grouped, priorities, severities, aiDepartments, monthly, departments, total, aiAnalyzed] = await Promise.all([
       Complaint.aggregate([{ $group: { _id: '$status', count: { $sum: 1 } } }]),
       Complaint.aggregate([{ $group: { _id: '$priority', count: { $sum: 1 } } }]),
+      Complaint.aggregate([{ $group: { _id: '$severity', count: { $sum: 1 } } }]),
+      Complaint.aggregate([{ $match: { 'aiAnalysis.department': { $exists: true, $ne: '' } } }, { $group: { _id: '$aiAnalysis.department', count: { $sum: 1 }, averageConfidence: { $avg: '$aiConfidence' } } }]),
       Complaint.aggregate([{ $group: { _id: { year: { $year: '$createdAt' }, month: { $month: '$createdAt' } }, count: { $sum: 1 } } }, { $sort: { '_id.year': 1, '_id.month': 1 } }, { $limit: 12 }]),
       Complaint.aggregate([{ $group: { _id: '$department', total: { $sum: 1 }, resolved: { $sum: { $cond: [{ $eq: ['$status', 'Resolved'] }, 1, 0] } } } }]),
-      Complaint.countDocuments()
+      Complaint.countDocuments(),
+      Complaint.countDocuments({ aiConfidence: { $ne: null } })
     ]);
-    res.json({ total, byStatus: Object.fromEntries(grouped.map(x => [x._id, x.count])), byPriority: Object.fromEntries(priorities.map(x => [x._id, x.count])), monthly, departments });
+    const aiConfidenceAverage = aiDepartments.length
+      ? Number((aiDepartments.reduce((sum, item) => sum + (item.averageConfidence || 0), 0) / aiDepartments.length).toFixed(2))
+      : 0;
+    res.json({
+      total,
+      aiAnalyzed,
+      aiConfidenceAverage,
+      byStatus: Object.fromEntries(grouped.map(x => [x._id, x.count])),
+      byPriority: Object.fromEntries(priorities.map(x => [x._id, x.count])),
+      bySeverity: Object.fromEntries(severities.map(x => [x._id, x.count])),
+      aiDepartments,
+      monthly,
+      departments
+    });
   } catch (error) { next(error); }
 });
 
 router.get('/:id', async (req, res, next) => {
   try {
-    const item = await Complaint.findById(req.params.id).populate('createdBy', 'name avatar').populate('assignedTo', 'name').populate('department', 'name');
+    const item = await Complaint.findById(req.params.id).populate('createdBy', 'name email phone avatar').populate('assignedTo', 'name').populate('department', 'name');
     if (!item) return res.status(404).json({ message: 'Complaint not found' });
-    if (req.user.role !== 'admin' && !item.createdBy._id.equals(req.user.id)) return res.status(403).json({ message: 'Not allowed' });
+    if (req.user.role === 'department' && (!req.user.department || !item.department?._id.equals(req.user.department))) return res.status(403).json({ message: 'Not allowed' });
+    if (req.user.role !== 'admin' && req.user.role !== 'department' && !item.createdBy._id.equals(req.user.id)) return res.status(403).json({ message: 'Not allowed' });
     res.json({ complaint: item });
   } catch (error) { next(error); }
 });
@@ -74,20 +100,36 @@ router.put('/:id', async (req, res, next) => {
   try {
     const item = await Complaint.findById(req.params.id);
     if (!item) return res.status(404).json({ message: 'Complaint not found' });
-    if (req.user.role !== 'admin') {
+    if (req.user.role === 'department') {
+      if (!req.user.department || !item.department?.equals(req.user.department)) return res.status(403).json({ message: 'Not allowed' });
+      const allowedStatuses = ['Accepted', 'In Progress', 'Resolution Submitted', 'Resolved'];
+      if (req.body.status && !allowedStatuses.includes(req.body.status)) return res.status(400).json({ message: 'Invalid department status' });
+      if (req.body.status) {
+        item.status = req.body.status;
+        if (req.body.status === 'Accepted') item.acceptedAt = new Date();
+        if (req.body.status === 'In Progress') item.startedAt = new Date();
+        if (req.body.status === 'Resolution Submitted') item.resolutionSubmittedAt = new Date();
+        if (req.body.status === 'Resolved') item.resolvedAt = new Date();
+        item.timeline.push({ status: req.body.status, remark: req.body.remark || req.body.resolutionDescription, by: req.user.id });
+      }
+      if (req.body.remark) item.departmentRemarks.push({ message: req.body.remark, by: req.user.id, images: req.body.images || [] });
+      ['resolutionDescription', 'beforeImage', 'afterImage', 'completionImage'].forEach(key => {
+        if (req.body[key] !== undefined) item[key] = req.body[key] || undefined;
+      });
+    } else if (req.user.role !== 'admin') {
       if (!item.createdBy.equals(req.user.id) || item.status !== 'Submitted') return res.status(403).json({ message: 'Only submitted complaints can be edited' });
       ['title', 'description', 'category', 'images', 'location', 'contactNumber', 'anonymous'].forEach(key => {
         if (req.body[key] !== undefined) item[key] = req.body[key];
       });
     } else {
-      ['status', 'priority', 'assignedTo', 'department', 'completionImage'].forEach(key => {
+      ['status', 'priority', 'severity', 'assignedTo', 'department', 'completionImage'].forEach(key => {
         if (req.body[key] !== undefined) item[key] = req.body[key] || undefined;
       });
       if (req.body.remark) item.adminRemarks.push({ message: req.body.remark, by: req.user.id });
       if (req.body.status) item.timeline.push({ status: req.body.status, remark: req.body.remark, by: req.user.id });
     }
     await item.save();
-    const type = item.status === 'Resolved' ? 'resolved' : req.body.remark ? 'remark' : 'updated';
+    const type = item.status === 'Resolved' ? 'resolved' : item.status === 'Resolution Submitted' ? 'resolution' : item.status === 'Accepted' ? 'accepted' : req.body.remark ? 'remark' : 'updated';
     await Promise.all([
       notify(item.createdBy, `${item.reference}: ${req.body.remark || `status changed to ${item.status}`}`, type, item.id),
       ActivityLog.create({ user: req.user.id, action: 'UPDATE_COMPLAINT', entity: 'Complaint', entityId: item.id, details: req.body, ip: req.ip })

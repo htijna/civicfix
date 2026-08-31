@@ -1,5 +1,5 @@
 import { Link, NavLink } from 'react-router-dom';
-import { ChevronDown, LayoutDashboard, LogOut, Plus, Settings, ShieldCheck, User } from 'lucide-react';
+import { Building2, ChevronDown, LayoutDashboard, LogOut, Plus, Settings, ShieldCheck, User } from 'lucide-react';
 import Logo from './Logo';
 import { useAuth } from '../context/AuthContext';
 
@@ -19,6 +19,7 @@ export default function Sidebar() {
         <small>OVERVIEW</small>
         <NavLink to="/dashboard"><LayoutDashboard />Dashboard</NavLink>
         {user?.role === 'admin' && <NavLink to="/admin"><ShieldCheck />Admin dashboard</NavLink>}
+        {user?.role === 'department' && <NavLink to="/department"><Building2 />Department dashboard</NavLink>}
         <NavLink to="/report"><Plus />Report an issue</NavLink>
         <small>ACCOUNT</small>
         <Link to="/profile"><User />My account</Link>

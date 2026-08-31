@@ -14,6 +14,8 @@ import notificationRoutes from './routes/notificationRoutes.js';
 import departmentRoutes from './routes/departmentRoutes.js';
 import userRoutes from './routes/userRoutes.js';
 import reportRoutes from './routes/reportRoutes.js';
+import departmentWorkRoutes from './routes/departmentWorkRoutes.js';
+import aiRoutes from './routes/aiRoutes.js';
 import { sanitizeInput } from './middleware/sanitize.js';
 if(process.env.NODE_ENV==='production'&&!process.env.JWT_SECRET)throw new Error('JWT_SECRET is required in production');
 
@@ -39,8 +41,8 @@ app.get('/api/stats',async(_,res,next)=>{
   const [total,resolved,pending,active,highPriority,resolution]=await Promise.all([
    Complaint.countDocuments(),
    Complaint.countDocuments({status:'Resolved'}),
-   Complaint.countDocuments({status:{$in:['Submitted','Under Review']}}),
-   Complaint.countDocuments({status:{$in:['Assigned','In Progress']}}),
+   Complaint.countDocuments({status:{$in:['Submitted','Under Review','Exception']}}),
+   Complaint.countDocuments({status:{$in:['Assigned','Accepted','In Progress','Resolution Submitted']}}),
    Complaint.countDocuments({priority:{$in:['High','Critical']}}),
    Complaint.aggregate([
     {$match:{status:'Resolved'}},
@@ -57,7 +59,7 @@ app.use('/api',(req,res,next)=>{
    message:'Database is not connected. Start MongoDB or set MONGODB_URI in server/.env.'
   });
  }
- next();
+  next();
 });
 app.use('/api/auth',authRoutes);
 app.use('/api/uploads',uploadRoutes);
@@ -66,6 +68,8 @@ app.use('/api/notifications',notificationRoutes);
 app.use('/api/departments',departmentRoutes);
 app.use('/api/users',userRoutes);
 app.use('/api/reports',reportRoutes);
+app.use('/api/department',departmentWorkRoutes);
+app.use('/api/ai',aiRoutes);
 app.use((err,req,res,next)=>res.status(err.status||500).json({message:err.message||'Something went wrong'}));
 const port=process.env.PORT||5000;
 app.listen(port,()=>console.log(`CivicFix API running on http://localhost:${port}`));
