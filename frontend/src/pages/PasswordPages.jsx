@@ -5,12 +5,54 @@ import { api } from '../services/api';
 
 export function ForgotPassword() {
   const [link, setLink] = useState('');
+  const [email, setEmail] = useState('');
+  const [error, setError] = useState('');
+
   const submit = async event => {
     event.preventDefault();
-    const data = await api('/auth/forgot-password', { method: 'POST', body: JSON.stringify({ email: new FormData(event.currentTarget).get('email') }) });
-    setLink(data.resetUrl || ''); toast.success(data.message);
+    const trimmed = (email || '').trim();
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    if (!emailRegex.test(trimmed)) {
+      setError('Please enter a valid email address.');
+      return;
+    }
+    setError('');
+    try {
+      const data = await api('/auth/forgot-password', { method: 'POST', body: JSON.stringify({ email: trimmed }) });
+      setLink(data.resetUrl || '');
+      toast.success(data.message);
+    } catch (err) {
+      setError(err.message);
+    }
   };
-  return <main className="standalone-page"><section className="form-card auth-card"><h1>Forgot password</h1><p>Enter your account email to receive a reset link.</p><form onSubmit={submit}><label>Email<input name="email" type="email" required /></label><button className="primary">Send reset link</button></form>{link && <a href={link}>Open development reset link</a>}<Link to="/login">Back to login</Link></section></main>;
+  return (
+    <main className="standalone-page">
+      <section className="form-card auth-card">
+        <h1>Forgot password</h1>
+        <p>Enter your account email to receive a reset link.</p>
+        <form onSubmit={submit} noValidate>
+          <label>
+            Email
+            <input
+              name="email"
+              type="email"
+              required
+              value={email}
+              onChange={e => {
+                setEmail(e.target.value);
+                if (error) setError('');
+              }}
+              placeholder="you@example.com"
+            />
+          </label>
+          {error && <p className="form-error">{error}</p>}
+          <button className="primary">Send reset link</button>
+        </form>
+        {link && <a href={link}>Open development reset link</a>}
+        <Link to="/login">Back to login</Link>
+      </section>
+    </main>
+  );
 }
 
 export function ResetPassword() {

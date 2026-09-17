@@ -8,8 +8,8 @@ export async function analyzeComplaint(input) {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        title: input.title,
-        description: input.description,
+        title: input.title === 'Pending AI Analysis' ? '' : input.title,
+        description: input.description === 'Pending AI Analysis' ? '' : input.description,
         category: input.category,
         location: input.location,
         images: input.images
@@ -33,10 +33,10 @@ export async function routeComplaint(complaint) {
       ? await Department.findOne({ name: analysis.department, active: true })
       : null;
 
-    if (analysis.title && (!complaint.title || complaint.title.trim() === '')) {
+    if (analysis.title && (!complaint.title || complaint.title.trim() === '' || complaint.title === 'Pending AI Analysis')) {
       complaint.title = analysis.title;
     }
-    if (analysis.description && (!complaint.description || complaint.description.trim() === '')) {
+    if (analysis.description && (!complaint.description || complaint.description.trim() === '' || complaint.description === 'Pending AI Analysis')) {
       complaint.description = analysis.description;
     }
 

@@ -13,9 +13,10 @@ const token = id => jwt.sign({ id }, process.env.JWT_SECRET || 'development-secr
 const publicUser = user => ({ id: user.id, name: user.name, email: user.email, role: user.role, department: user.department, active: user.active, phone: user.phone, address: user.address, ward: user.ward, avatar: user.avatar, language: user.language });
 
 router.post('/register', [
-  body('name').trim().isLength({ min: 2, max: 80 }),
-  body('email').isEmail().normalizeEmail(),
-  body('password').isLength({ min: 8, max: 128 }),
+  body('name').trim().isLength({ min: 2, max: 80 }).withMessage('Name must be between 2 and 80 characters'),
+  body('email').isEmail().normalizeEmail().withMessage('Please provide a valid email address'),
+  body('password').isLength({ min: 8, max: 128 }).withMessage('Password must be at least 8 characters'),
+  body('phone').optional({ checkFalsy: true }).matches(/^\d{10}$/).withMessage('Mobile number must be a 10-digit number'),
   validate
 ], async (req, res, next) => {
   try {

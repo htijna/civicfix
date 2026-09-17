@@ -41,13 +41,11 @@ router.get('/', async (req, res, next) => {
 });
 
 router.post('/', [
-  body('title').trim().isLength({ min: 5, max: 120 }),
-  body('description').trim().isLength({ min: 10, max: 3000 }),
   body('location.address').trim().notEmpty(),
   validate
 ], async (req, res, next) => {
   try {
-    const complaint = await Complaint.create({ ...req.body, createdBy: req.user.id });
+    const complaint = new Complaint({ ...req.body, createdBy: req.user.id });
     const routedComplaint = await routeComplaint(complaint);
     await Promise.all([
       notify(req.user.id, `Complaint ${routedComplaint.reference} was submitted`, 'submitted', routedComplaint.id),

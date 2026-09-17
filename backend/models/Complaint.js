@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 const eventSchema=new mongoose.Schema({status:String,remark:String,by:{type:mongoose.Schema.Types.ObjectId,ref:'User'},at:{type:Date,default:Date.now}},{_id:false});
 const schema=new mongoose.Schema({
- reference:{type:String,unique:true},title:{type:String,required:true,trim:true},description:{type:String,required:true},category:{type:String,default:'Pending AI Analysis'},images:[String],
+ reference:{type:String,unique:true},title:{type:String,trim:true,default:'Pending AI Analysis'},description:{type:String,default:'Pending AI Analysis'},category:{type:String,default:'Pending AI Analysis'},images:[String],
  location:{address:{type:String,required:true},latitude:Number,longitude:Number,ward:String,landmark:String},contactNumber:String,anonymous:{type:Boolean,default:false},
  status:{type:String,enum:['Submitted','Under Review','Assigned','Accepted','In Progress','Resolution Submitted','Resolved','Rejected','Exception'],default:'Submitted'},priority:{type:String,enum:['Low','Medium','High','Critical'],default:'Medium'},
  severity:{type:String,enum:['Low','Medium','High','Critical'],default:'Medium'},
