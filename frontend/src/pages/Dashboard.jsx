@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
+import toast from 'react-hot-toast';
 import {
   Bell,
   CheckCircle2,
@@ -8,6 +9,7 @@ import {
   MapPin,
   Plus,
   Search,
+  Trash2,
 } from 'lucide-react';
 import {
   Area,
@@ -51,6 +53,17 @@ export default function Dashboard() {
       .catch(e => setError(e.message))
       .finally(() => setLoading(false));
   }, []);
+
+  const remove = async (id) => {
+    if (!window.confirm('Delete this submitted complaint?')) return;
+    try {
+      await request(`/complaints/${id}`, { method: 'DELETE' });
+      setComplaints(complaints => complaints.filter(c => c._id !== id));
+      toast.success('Complaint deleted');
+    } catch (e) {
+      toast.error(e.message);
+    }
+  };
 
   const shown = useMemo(() => complaints.filter(c =>
     [c.title, c.category, c.status, c.location?.address].some(x => x?.toLowerCase().includes(query.toLowerCase()))
@@ -119,7 +132,7 @@ export default function Dashboard() {
           </div>
           <div className="table-wrap">
             <table>
-              <thead><tr><th>COMPLAINT</th><th>LOCATION</th><th>DATE</th><th>STATUS</th><th>PRIORITY</th></tr></thead>
+              <thead><tr><th>COMPLAINT</th><th>LOCATION</th><th>DATE</th><th>STATUS</th><th>PRIORITY</th><th>ACTIONS</th></tr></thead>
               <tbody>{shown.map(c => (
                 <tr key={c._id}>
                   <td><span className="category-dot" style={{ background: categoryColors[c.category] || '#2f8b6c' }} /><div><Link to={`/complaints/${c._id}`}><b>{c.title}</b></Link><small>{c.reference} - {c.category}</small></div></td>
@@ -127,6 +140,13 @@ export default function Dashboard() {
                   <td>{new Date(c.createdAt).toLocaleDateString('en-IN')}</td>
                   <td><Status>{c.status}</Status></td>
                   <td>{c.priority}</td>
+                  <td>
+                    {c.status === 'Submitted' && (
+                      <button className="danger-btn" style={{ padding: '4px 8px', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '4px' }} onClick={() => remove(c._id)}>
+                        <Trash2 size={14} /> Delete
+                      </button>
+                    )}
+                  </td>
                 </tr>
               ))}</tbody>
             </table>
