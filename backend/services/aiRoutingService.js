@@ -1,6 +1,8 @@
 import Department from '../models/Department.js';
+import LocalAuthority from '../models/LocalAuthority.js';
 import User from '../models/User.js';
 import { notify } from './notificationService.js';
+import { departmentForCategory, departmentNameCandidates } from './routingRules.js';
 
 export async function analyzeComplaint(input) {
   try {
@@ -29,9 +31,52 @@ export async function analyzeComplaint(input) {
 export async function routeComplaint(complaint) {
   try {
     const analysis = await analyzeComplaint(complaint);
-    const department = analysis.department
-      ? await Department.findOne({ name: analysis.department, active: true })
-      : null;
+    
+    let localAuthorityId = null;
+    let department = null;
+    let assignedOfficer = null;
+    let routingStatus = 'Pending Review';
+    const mappedDepartment = departmentForCategory(analysis.category);
+
+    if (complaint.location && complaint.location.coordinates && complaint.location.coordinates.length === 2) {
+      const [longitude, latitude] = complaint.location.coordinates;
+      const authority = await LocalAuthority.findOne({
+        boundary: {
+          $geoIntersects: {
+            $geometry: {
+              type: "Point",
+              coordinates: [longitude, latitude]
+            }
+          }
+        },
+        status: true
+      });
+
+      if (authority) {
+        localAuthorityId = authority._id;
+        const departmentNames = departmentNameCandidates(mappedDepartment, analysis.category);
+        const departmentQuery = {
+          localAuthority: authority._id,
+          active: true,
+          $or: [
+            { categories: analysis.category },
+            { name: { $in: departmentNames } }
+          ]
+        };
+
+        department = await Department.findOne(departmentQuery);
+
+        if (department) {
+          assignedOfficer = await User.findOne({
+            role: 'department_officer',
+            department: department._id,
+            localAuthority: authority._id,
+            active: true
+          }).sort('createdAt').select('_id');
+          if (assignedOfficer) routingStatus = 'Routed';
+        }
+      }
+    }
 
     if (analysis.title && (!complaint.title || complaint.title.trim() === '' || complaint.title === 'Pending AI Analysis')) {
       complaint.title = analysis.title;
@@ -44,28 +89,31 @@ export async function routeComplaint(complaint) {
     complaint.priority = analysis.priority;
     complaint.severity = analysis.severity;
     complaint.aiConfidence = analysis.confidence;
+    complaint.localAuthority = localAuthorityId;
+    complaint.routingStatus = routingStatus;
+    complaint.assignedTo = assignedOfficer?._id;
     complaint.aiAnalysis = {
       ...analysis,
+      department: mappedDepartment || analysis.department,
       description: analysis.aiReport || analysis.description,
       analyzedAt: new Date(),
-      requiresException: !department
+      requiresException: routingStatus === 'Pending Review'
     };
 
-    if (department) {
+    if (department && assignedOfficer && routingStatus === 'Routed') {
       complaint.department = department.id;
       complaint.status = 'Assigned';
       complaint.assignedAt = new Date();
-      complaint.timeline.push({ status: 'Assigned', remark: `AI routed to ${department.name}` });
+      complaint.timeline.push({ status: 'Assigned', remark: `Automatically routed to ${department.name}` });
     } else {
-      complaint.status = 'Exception';
-      complaint.timeline.push({ status: 'Exception', remark: 'AI could not find an active department match' });
+      complaint.status = 'Under Review';
+      complaint.timeline.push({ status: 'Under Review', remark: 'Automatic routing could not find a matching service-area officer' });
     }
 
     await complaint.save();
 
-    if (department) {
-      const users = await User.find({ role: 'department', department: department.id }).select('_id');
-      await Promise.all(users.map(user => notify(user._id, `${complaint.reference} was automatically assigned to your department`, 'assigned', complaint.id)));
+    if (department && assignedOfficer && routingStatus === 'Routed') {
+      await notify(assignedOfficer._id, `${complaint.reference} was automatically assigned to your department dashboard`, 'assigned', complaint.id);
       await notify(complaint.createdBy, `${complaint.reference} was assigned to ${department.name}`, 'assigned', complaint.id);
     }
 

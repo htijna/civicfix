@@ -21,8 +21,8 @@ export default function MobileNav() {
       <Logo />
       <div className="mobile-nav-icons">
         {user?.role === 'admin' && <Link to="/admin" className="primary small"><ShieldCheck size={17} />Admin</Link>}
-        {user?.role === 'department' && <Link to="/department" className="primary small"><Building2 size={17} />Department</Link>}
-        {user?.role !== 'admin' && user?.role !== 'department' && <Link to="/report" className="primary small"><Plus size={17} />Report issue</Link>}
+        {user?.role === 'department_officer' && <Link to="/department" className="primary small"><Building2 size={17} />Department</Link>}
+        {user?.role !== 'admin' && user?.role !== 'department_officer' && <Link to="/report" className="primary small"><Plus size={17} />Report issue</Link>}
         <NotificationPanel />
         <button className="icon-toggle" onClick={() => setOpen(value => !value)} aria-label="Menu"><Menu /></button>
       </div>
@@ -30,7 +30,7 @@ export default function MobileNav() {
         <div className="mobile-menu">
           <NavLink to="/dashboard">Dashboard</NavLink>
           {user?.role === 'admin' && <NavLink to="/admin"><ShieldCheck size={17} />Admin dashboard</NavLink>}
-          {user?.role === 'department' && <NavLink to="/department"><Building2 size={17} />Department dashboard</NavLink>}
+          {user?.role === 'department_officer' && <NavLink to="/department"><Building2 size={17} />Department dashboard</NavLink>}
           <NavLink to="/report">Report an issue</NavLink>
           <NavLink to="/profile"><User size={17} />Profile</NavLink>
           <DarkModeToggle />

@@ -21,7 +21,8 @@ export default function Report() {
     const params = new URLSearchParams({
       format: 'jsonv2',
       lat: String(location.latitude),
-      lon: String(location.longitude)
+      lon: String(location.longitude),
+      'accept-language': 'en'
     });
 
     fetch(`https://nominatim.openstreetmap.org/reverse?${params}`, { signal: controller.signal })

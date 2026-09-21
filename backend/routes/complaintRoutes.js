@@ -10,17 +10,21 @@ import { routeComplaint } from '../services/aiRoutingService.js';
 const router = Router();
 router.use(protect);
 
+function idsEqual(left, right) {
+  return left?._id?.equals(right) || left?.equals?.(right) || String(left) === String(right);
+}
+
 router.get('/', async (req, res, next) => {
   try {
-    if (req.user.role === 'department' && !req.user.department) return res.status(403).json({ message: 'Department account is not linked to a department' });
+    if (req.user.role === 'department_officer' && (!req.user.department || !req.user.localAuthority)) return res.status(403).json({ message: 'Department account is not linked to a department or local authority' });
     const query = req.user.role === 'admin'
       ? {}
-      : req.user.role === 'department'
-        ? { department: req.user.department }
+      : req.user.role === 'department_officer'
+        ? { department: req.user.department, localAuthority: req.user.localAuthority }
         : { createdBy: req.user.id };
-    const filterKeys = req.user.role === 'department'
+    const filterKeys = req.user.role === 'department_officer'
       ? ['status', 'category', 'priority', 'severity']
-      : ['status', 'category', 'priority', 'severity', 'department'];
+      : ['status', 'category', 'priority', 'severity', 'department', 'localAuthority', 'routingStatus'];
     for (const key of filterKeys) if (req.query[key]) query[key] = req.query[key];
     if (req.query.ward) query['location.ward'] = req.query.ward;
     if (req.query.from || req.query.to) {
@@ -33,7 +37,7 @@ router.get('/', async (req, res, next) => {
     const limit = Math.min(Math.max(Number(req.query.limit) || 50, 1), 100);
     const [data, count] = await Promise.all([
       Complaint.find(query).sort('-createdAt').skip((page - 1) * limit).limit(limit)
-        .populate('createdBy', 'name email phone avatar').populate('assignedTo', 'name').populate('department', 'name'),
+        .populate('createdBy', 'name email phone avatar').populate('assignedTo', 'name').populate('department', 'name').populate('localAuthority', 'name'),
       Complaint.countDocuments(query)
     ]);
     res.json({ count, page, pages: Math.ceil(count / limit), complaints: data });
@@ -45,7 +49,12 @@ router.post('/', [
   validate
 ], async (req, res, next) => {
   try {
-    const complaint = new Complaint({ ...req.body, createdBy: req.user.id });
+    const complaintData = { ...req.body, createdBy: req.user.id };
+    if (complaintData.location && complaintData.location.longitude && complaintData.location.latitude) {
+      complaintData.location.type = 'Point';
+      complaintData.location.coordinates = [complaintData.location.longitude, complaintData.location.latitude];
+    }
+    const complaint = new Complaint(complaintData);
     const routedComplaint = await routeComplaint(complaint);
     await Promise.all([
       notify(req.user.id, `Complaint ${routedComplaint.reference} was submitted`, 'submitted', routedComplaint.id),
@@ -86,10 +95,10 @@ router.get('/admin/summary', allow('admin'), async (req, res, next) => {
 
 router.get('/:id', async (req, res, next) => {
   try {
-    const item = await Complaint.findById(req.params.id).populate('createdBy', 'name email phone avatar').populate('assignedTo', 'name').populate('department', 'name');
+    const item = await Complaint.findById(req.params.id).populate('createdBy', 'name email phone avatar').populate('assignedTo', 'name').populate('department', 'name').populate('localAuthority', 'name');
     if (!item) return res.status(404).json({ message: 'Complaint not found' });
-    if (req.user.role === 'department' && (!req.user.department || !item.department?._id.equals(req.user.department))) return res.status(403).json({ message: 'Not allowed' });
-    if (req.user.role !== 'admin' && req.user.role !== 'department' && !item.createdBy._id.equals(req.user.id)) return res.status(403).json({ message: 'Not allowed' });
+    if (req.user.role === 'department_officer' && (!req.user.department || !idsEqual(item.department, req.user.department) || !idsEqual(item.localAuthority, req.user.localAuthority))) return res.status(403).json({ message: 'Not allowed' });
+    if (req.user.role !== 'admin' && req.user.role !== 'department_officer' && !item.createdBy._id.equals(req.user.id)) return res.status(403).json({ message: 'Not allowed' });
     res.json({ complaint: item });
   } catch (error) { next(error); }
 });
@@ -98,8 +107,8 @@ router.put('/:id', async (req, res, next) => {
   try {
     const item = await Complaint.findById(req.params.id);
     if (!item) return res.status(404).json({ message: 'Complaint not found' });
-    if (req.user.role === 'department') {
-      if (!req.user.department || !item.department?.equals(req.user.department)) return res.status(403).json({ message: 'Not allowed' });
+    if (req.user.role === 'department_officer') {
+      if (!req.user.department || !idsEqual(item.department, req.user.department) || !idsEqual(item.localAuthority, req.user.localAuthority)) return res.status(403).json({ message: 'Not allowed' });
       const allowedStatuses = ['Accepted', 'In Progress', 'Resolution Submitted', 'Resolved'];
       if (req.body.status && !allowedStatuses.includes(req.body.status)) return res.status(400).json({ message: 'Invalid department status' });
       if (req.body.status) {
@@ -120,7 +129,7 @@ router.put('/:id', async (req, res, next) => {
         if (req.body[key] !== undefined) item[key] = req.body[key];
       });
     } else {
-      ['status', 'priority', 'severity', 'assignedTo', 'department', 'completionImage'].forEach(key => {
+      ['status', 'priority', 'severity', 'assignedTo', 'department', 'localAuthority', 'routingStatus', 'completionImage'].forEach(key => {
         if (req.body[key] !== undefined) item[key] = req.body[key] || undefined;
       });
       if (req.body.remark) item.adminRemarks.push({ message: req.body.remark, by: req.user.id });

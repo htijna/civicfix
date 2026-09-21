@@ -42,7 +42,7 @@ function AdminOnly({ children }) {
 function DepartmentOnly({ children }) {
   const { user } = useAuth();
 
-  return user?.role === 'department' ? children : <Navigate to="/dashboard" replace />;
+  return user?.role === 'department_officer' ? children : <Navigate to="/dashboard" replace />;
 }
 
 export default function App() {

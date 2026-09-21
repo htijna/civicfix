@@ -21,7 +21,7 @@ export default function AuthPage({ mode }) {
   useEffect(() => {
     if (!authReady || !user) return;
     if (isAdminLogin && user.role !== 'admin') nav('/dashboard', { replace: true });
-    else if (!isAdminLogin && user.role === 'department' && redirectTo === '/dashboard') nav('/department', { replace: true });
+    else if (!isAdminLogin && user.role === 'department_officer' && redirectTo === '/dashboard') nav('/department', { replace: true });
     else nav(redirectTo, { replace: true });
   }, [authReady, isAdminLogin, nav, redirectTo, user]);
 
@@ -77,7 +77,7 @@ export default function AuthPage({ mode }) {
         const signedInUser = isAdminLogin
           ? await adminLogin(emailVal, form.get('password'))
           : await login(emailVal, form.get('password'));
-        if (!isAdminLogin && signedInUser?.role === 'department' && redirectTo === '/dashboard') {
+        if (!isAdminLogin && signedInUser?.role === 'department_officer' && redirectTo === '/dashboard') {
           nav('/department', { replace: true });
           return;
         }

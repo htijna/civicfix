@@ -14,6 +14,11 @@ function StatusBadge({ value }) {
   return <span className={`status ${value.toLowerCase().replaceAll(' ', '-')}`}><i />{value}</span>;
 }
 
+function formatGps(location) {
+  if (!Number.isFinite(location?.latitude) || !Number.isFinite(location?.longitude)) return 'Not captured';
+  return `${location.latitude.toFixed(6)}, ${location.longitude.toFixed(6)}`;
+}
+
 export default function DepartmentDashboard() {
   const [complaints, setComplaints] = useState([]);
   const [summary, setSummary] = useState({ byStatus: {} });
@@ -84,7 +89,9 @@ export default function DepartmentDashboard() {
                 <dt>Severity</dt><dd>{item.severity || 'Medium'}</dd>
                 <dt>Priority</dt><dd>{item.priority}</dd>
                 <dt>Confidence</dt><dd>{Math.round((item.aiConfidence || item.aiAnalysis?.confidence || 0) * 100)}%</dd>
+                <dt>Service area</dt><dd>{item.localAuthority?.name || 'Not detected'}</dd>
                 <dt>Location</dt><dd>{item.location?.address || 'Not supplied'}</dd>
+                <dt>GPS</dt><dd>{formatGps(item.location)}</dd>
               </dl>
               {!!item.images?.length && <div className="gallery">{item.images.map(url => <img key={url} src={url} alt="Complaint" />)}</div>}
               <div className="department-actions">

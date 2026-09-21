@@ -141,7 +141,7 @@ export default function ComplaintDetails() {
 
   if (!item) return <AuthenticatedShell title="Complaint details"><main className="form-page">Loading complaint...</main></AuthenticatedShell>;
 
-  const backPath = user?.role === 'admin' ? '/admin' : user?.role === 'department' ? '/department' : '/dashboard';
+  const backPath = user?.role === 'admin' ? '/admin' : user?.role === 'department_officer' ? '/department' : '/dashboard';
 
   return (
     <AuthenticatedShell title={item.title} subtitle={`${item.reference} - ${item.status}`}>
@@ -158,7 +158,9 @@ export default function ComplaintDetails() {
           <dt>Priority</dt><dd>{item.priority}</dd>
           <dt>Severity</dt><dd>{item.severity || 'Medium'}</dd>
           <dt>Department</dt><dd>{item.department?.name || item.aiAnalysis?.department || 'Not assigned'}</dd>
+          <dt>Service area</dt><dd>{item.localAuthority?.name || 'Not detected'}</dd>
           <dt>Address</dt><dd>{item.location?.address}</dd>
+          <dt>GPS</dt><dd>{Number.isFinite(item.location?.latitude) && Number.isFinite(item.location?.longitude) ? `${item.location.latitude.toFixed(6)}, ${item.location.longitude.toFixed(6)}` : 'Not captured'}</dd>
         </dl>
         <h2>AI Analysis</h2>
         <dl className="ai-grid">

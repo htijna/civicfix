@@ -10,12 +10,15 @@ import {
   Download,
   FileDown,
   Filter,
+  Globe,
   MapPin,
   MessageSquarePlus,
   RefreshCw,
   Search,
   ShieldCheck,
-  Users
+  Trash2,
+  Users,
+  X
 } from 'lucide-react';
 import AuthenticatedShell from '../components/AuthenticatedShell';
 import { api, API } from '../services/api';
@@ -57,23 +60,27 @@ export default function AdminDashboard() {
   const [complaints, setComplaints] = useState([]);
   const [summary, setSummary] = useState({ byStatus: {}, byPriority: {}, bySeverity: {}, aiDepartments: [] });
   const [departments, setDepartments] = useState([]);
+  const [localAuthorities, setLocalAuthorities] = useState([]);
   const [assignees, setAssignees] = useState([]);
   const [users, setUsers] = useState([]);
   const [activity, setActivity] = useState([]);
   const [filters, setFilters] = useState(defaultFilters);
   const [remarkDrafts, setRemarkDrafts] = useState({});
-  const [departmentForm, setDepartmentForm] = useState({ name: '', ward: '', email: '', categories: '' });
-  const [userForm, setUserForm] = useState({ name: '', email: '', password: '', role: 'department', department: '' });
+  const [departmentForm, setDepartmentForm] = useState({ name: '', ward: '', email: '', categories: '', localAuthority: '' });
+  const [userForm, setUserForm] = useState({ name: '', email: '', password: '', role: 'department_officer', department: '', localAuthority: '' });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [confirmDelete, setConfirmDelete] = useState(null);
+  const [laForm, setLaForm] = useState({ name: '', code: '', district: '', state: '' });
 
   const load = useCallback(async (nextFilters = defaultFilters) => {
     const query = new URLSearchParams(Object.entries(nextFilters).filter(([, value]) => value)).toString();
     try {
-      const [list, stats, d, u, allUsers, a] = await Promise.all([
+      const [list, stats, d, la, u, allUsers, a] = await Promise.all([
         api(query ? `/complaints?${query}` : '/complaints'),
         api('/complaints/admin/summary'),
         api('/departments/admin/all'),
+        api('/local-authorities'),
         api('/users/assignees'),
         api('/users'),
         api('/users/activity')
@@ -82,6 +89,7 @@ export default function AdminDashboard() {
       setComplaints(list.complaints || []);
       setSummary(stats || {});
       setDepartments(d.departments || []);
+      setLocalAuthorities(la.localAuthorities || la || []);
       setAssignees(u.users || []);
       setUsers(allUsers.users || []);
       setActivity(a.activity || []);
@@ -144,6 +152,7 @@ export default function AdminDashboard() {
 
   const createDepartment = async event => {
     event.preventDefault();
+    if (!departmentForm.localAuthority) return toast.error('Please select a local authority');
     await api('/departments', {
       method: 'POST',
       body: JSON.stringify({
@@ -152,7 +161,7 @@ export default function AdminDashboard() {
       })
     });
     toast.success('Department created');
-    setDepartmentForm({ name: '', ward: '', email: '', categories: '' });
+    setDepartmentForm({ name: '', ward: '', email: '', categories: '', localAuthority: '' });
     await load(filters);
   };
 
@@ -168,11 +177,24 @@ export default function AdminDashboard() {
     await load(filters);
   };
 
+  const deleteUser = async user => {
+    setConfirmDelete(user);
+  };
+
+  const confirmDeleteUser = async () => {
+    if (!confirmDelete) return;
+    await api(`/users/${confirmDelete._id}`, { method: 'DELETE' });
+    toast.success('User deleted');
+    setConfirmDelete(null);
+    await load(filters);
+  };
+
   const createUser = async event => {
     event.preventDefault();
+    if (userForm.role === 'department_officer' && (!userForm.department || !userForm.localAuthority)) return toast.error('Department officers must be linked to a department and local authority');
     await api('/users', { method: 'POST', body: JSON.stringify(userForm) });
     toast.success('User created');
-    setUserForm({ name: '', email: '', password: '', role: 'department', department: '' });
+    setUserForm({ name: '', email: '', password: '', role: 'department_officer', department: '', localAuthority: '' });
     await load(filters);
   };
 
@@ -263,12 +285,51 @@ export default function AdminDashboard() {
         </div>
       </Section>
 
-      <Section title="Administration" subtitle="Manage departments, category mappings, users, and recent admin activity.">
+      <Section title="Administration" subtitle="Manage local authorities, departments, category mappings, users, and recent admin activity.">
         <div className="dash-grid admin-bottom">
+          <section className="panel">
+            <div className="panel-head"><div><h3>Local Authorities</h3><p>{localAuthorities.length} authorities</p></div><Globe size={18} /></div>
+            <form className="department-form" onSubmit={async event => {
+              event.preventDefault();
+              if (!laForm.name || !laForm.code) return toast.error('Name and code are required');
+              await api('/local-authorities', {
+                method: 'POST',
+                body: JSON.stringify({
+                  ...laForm,
+                  boundary: {
+                    type: 'Polygon',
+                    coordinates: [[[76.2, 9.9], [76.4, 9.9], [76.4, 10.1], [76.2, 10.1], [76.2, 9.9]]]
+                  }
+                })
+              });
+              toast.success('Local authority created');
+              setLaForm({ name: '', code: '', district: '', state: '' });
+              await load(filters);
+            }}>
+              <input required placeholder="Name (e.g. Kochi Municipal Corp.)" value={laForm.name} onChange={event => setLaForm({ ...laForm, name: event.target.value })} />
+              <input required placeholder="Code (e.g. KCH)" value={laForm.code} onChange={event => setLaForm({ ...laForm, code: event.target.value })} />
+              <input placeholder="District" value={laForm.district} onChange={event => setLaForm({ ...laForm, district: event.target.value })} />
+              <input placeholder="State" value={laForm.state} onChange={event => setLaForm({ ...laForm, state: event.target.value })} />
+              <button className="primary">Add</button>
+            </form>
+            <div className="department-list">
+              {localAuthorities.map(la => (
+                <div key={la._id}>
+                  <b>{la.name}</b>
+                  <small>{la.code} — {la.district || 'No district'}, {la.state || 'No state'}</small>
+                </div>
+              ))}
+              {!localAuthorities.length && <p className="empty-state">No local authorities yet. Create one above to enable department routing.</p>}
+            </div>
+          </section>
           <section className="panel">
             <div className="panel-head"><div><h3>Departments</h3><p>{departments.length} active departments</p></div><Building2 size={18} /></div>
             <form className="department-form" onSubmit={createDepartment}>
               <input required placeholder="Department name" value={departmentForm.name} onChange={event => setDepartmentForm({ ...departmentForm, name: event.target.value })} />
+              <select required value={departmentForm.localAuthority} onChange={event => setDepartmentForm({ ...departmentForm, localAuthority: event.target.value })}>
+                <option value="">Local authority *</option>
+                {localAuthorities.map(la => <option value={la._id} key={la._id}>{la.name}</option>)}
+              </select>
               <input placeholder="Ward" value={departmentForm.ward} onChange={event => setDepartmentForm({ ...departmentForm, ward: event.target.value })} />
               <input type="email" placeholder="Email" value={departmentForm.email} onChange={event => setDepartmentForm({ ...departmentForm, email: event.target.value })} />
               <input placeholder="Categories, comma separated" value={departmentForm.categories} onChange={event => setDepartmentForm({ ...departmentForm, categories: event.target.value })} />
@@ -291,13 +352,17 @@ export default function AdminDashboard() {
               <input required type="email" placeholder="Email" value={userForm.email} onChange={event => setUserForm({ ...userForm, email: event.target.value })} />
               <input required type="password" minLength="8" placeholder="Password" value={userForm.password} onChange={event => setUserForm({ ...userForm, password: event.target.value })} />
               <select value={userForm.role} onChange={event => setUserForm({ ...userForm, role: event.target.value })}>
-                <option value="department">Department</option>
+                <option value="department_officer">Department Officer</option>
                 <option value="admin">Admin</option>
                 <option value="citizen">Citizen</option>
               </select>
-              <select value={userForm.department} onChange={event => setUserForm({ ...userForm, department: event.target.value })} disabled={userForm.role !== 'department'}>
+              <select value={userForm.department} onChange={event => setUserForm({ ...userForm, department: event.target.value })} disabled={userForm.role !== 'department_officer'}>
                 <option value="">Department</option>
                 {departments.map(department => <option value={department._id} key={department._id}>{department.name}</option>)}
+              </select>
+              <select value={userForm.localAuthority} onChange={event => setUserForm({ ...userForm, localAuthority: event.target.value })} disabled={userForm.role !== 'department_officer'}>
+                <option value="">Local authority</option>
+                {localAuthorities.map(la => <option value={la._id} key={la._id}>{la.name}</option>)}
               </select>
               <button className="primary">Create</button>
             </form>
@@ -307,6 +372,7 @@ export default function AdminDashboard() {
                   <b>{user.name || user.email}</b>
                   <small>{user.role} - {user.department?.name || 'No department'} - {user.active === false ? 'Inactive' : 'Active'}</small>
                   <button className="secondary" onClick={() => updateUser(user, { active: user.active === false })}>{user.active === false ? 'Activate' : 'Deactivate'}</button>
+                  <button className="secondary" style={{ color: '#dc2626' }} onClick={() => deleteUser(user)}><Trash2 size={14} /></button>
                 </article>
               ))}
             </div>
@@ -325,6 +391,28 @@ export default function AdminDashboard() {
           </section>
         </div>
       </Section>
+      {confirmDelete && (
+        <div className="crop-modal-backdrop" onClick={() => setConfirmDelete(null)}>
+          <div className="crop-modal" style={{ maxWidth: 420, padding: 0 }} onClick={e => e.stopPropagation()}>
+            <div className="crop-modal-head">
+              <div>
+                <h3 style={{ color: '#dc2626' }}>Delete User</h3>
+                <p>This action is permanent and cannot be undone.</p>
+              </div>
+              <button type="button" className="icon-action" onClick={() => setConfirmDelete(null)} aria-label="Cancel"><X size={18} /></button>
+            </div>
+            <div style={{ padding: '20px' }}>
+              <p style={{ margin: '0 0 6px', fontSize: 14 }}>Are you sure you want to permanently delete:</p>
+              <p style={{ margin: '0 0 18px', fontWeight: 700, fontSize: 16 }}>{confirmDelete.name || confirmDelete.email}</p>
+              <p style={{ margin: 0, fontSize: 12, color: 'var(--muted)' }}>Role: {confirmDelete.role} — {confirmDelete.department?.name || 'No department'}</p>
+            </div>
+            <div className="crop-actions" style={{ borderTop: '1px solid var(--line)', padding: '16px 20px' }}>
+              <button className="secondary" onClick={() => setConfirmDelete(null)}>Cancel</button>
+              <button className="primary" style={{ background: '#dc2626', borderColor: '#dc2626' }} onClick={confirmDeleteUser}>Delete permanently</button>
+            </div>
+          </div>
+        </div>
+      )}
     </AuthenticatedShell>
   );
 }

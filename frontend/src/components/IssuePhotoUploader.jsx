@@ -92,7 +92,7 @@ function validateFiles(files, currentCount) {
 }
 
 function CropModal({ file, onSave, onCancel }) {
-  const imageUrl = useMemo(() => URL.createObjectURL(file), [file]);
+  const [imageUrl, setImageUrl] = useState('');
   const [crop, setCrop] = useState({ x: 0, y: 0 });
   const [zoom, setZoom] = useState(1);
   const [rotation, setRotation] = useState(0);
@@ -101,8 +101,10 @@ function CropModal({ file, onSave, onCancel }) {
   const titleId = useId();
 
   useEffect(() => {
-    return () => URL.revokeObjectURL(imageUrl);
-  }, [imageUrl]);
+    const url = URL.createObjectURL(file);
+    setImageUrl(url);
+    return () => URL.revokeObjectURL(url);
+  }, [file]);
 
   const save = async () => {
     setBusy(true);
@@ -154,12 +156,16 @@ export default function IssuePhotoUploader({ images, setImages }) {
   const galleryInput = useRef(null);
   const [queue, setQueue] = useState([]);
   const [message, setMessage] = useState('');
-  const previewUrls = useMemo(() => images.map(image => ({
-    file: image,
-    url: URL.createObjectURL(image)
-  })), [images]);
+  const [previewUrls, setPreviewUrls] = useState([]);
 
-  useEffect(() => () => previewUrls.forEach(item => URL.revokeObjectURL(item.url)), [previewUrls]);
+  useEffect(() => {
+    const urls = images.map(image => ({
+      file: image,
+      url: URL.createObjectURL(image)
+    }));
+    setPreviewUrls(urls);
+    return () => urls.forEach(item => URL.revokeObjectURL(item.url));
+  }, [images]);
 
   const handleFiles = event => {
     const files = Array.from(event.target.files || []);
