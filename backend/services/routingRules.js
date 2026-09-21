@@ -1,8 +1,9 @@
 const CATEGORY_DEPARTMENT_MAP = [
-  { patterns: [/road/i, /pothole/i, /drain/i], department: 'Engineering/Public Works' },
+  { patterns: [/road/i, /pothole/i], department: 'Engineering/Public Works' },
   { patterns: [/street\s*light/i, /streetlight/i, /traffic\s*signal/i, /electric/i], department: 'Electrical' },
   { patterns: [/water/i, /leak/i, /pipe/i], department: 'Water Supply' },
   { patterns: [/garbage/i, /waste/i, /sanitation/i, /dump/i], department: 'Sanitation' },
+  { patterns: [/drainage/i, /drain/i], department: 'Drainage' },
   { patterns: [/park/i, /tree/i], department: 'Parks and Recreation' }
 ];
 
@@ -11,6 +12,7 @@ const DEPARTMENT_ALIASES = {
   Electrical: ['Electrical', 'Electrical and Streetlights'],
   'Water Supply': ['Water Supply', 'Water Authority'],
   Sanitation: ['Sanitation', 'Waste Management'],
+  Drainage: ['Drainage'],
   'Parks and Recreation': ['Parks and Recreation']
 };
 

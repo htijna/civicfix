@@ -1,7 +1,7 @@
 import Department from '../models/Department.js';
-import LocalAuthority from '../models/LocalAuthority.js';
 import User from '../models/User.js';
 import { notify } from './notificationService.js';
+import { resolveGisBoundariesFromComplaintLocation } from './locationResolver.js';
 import { departmentForCategory, departmentNameCandidates } from './routingRules.js';
 
 export async function analyzeComplaint(input) {
@@ -33,30 +33,21 @@ export async function routeComplaint(complaint) {
     const analysis = await analyzeComplaint(complaint);
     
     let localAuthorityId = null;
+    let wardBoundary = null;
     let department = null;
     let assignedOfficer = null;
     let routingStatus = 'Pending Review';
-    const mappedDepartment = departmentForCategory(analysis.category);
+    const mappedDepartment = departmentForCategory(analysis.category) || analysis.department;
 
-    if (complaint.location && complaint.location.coordinates && complaint.location.coordinates.length === 2) {
-      const [longitude, latitude] = complaint.location.coordinates;
-      const authority = await LocalAuthority.findOne({
-        boundary: {
-          $geoIntersects: {
-            $geometry: {
-              type: "Point",
-              coordinates: [longitude, latitude]
-            }
-          }
-        },
-        status: true
-      });
+    if (complaint.location?.address || (complaint.location?.coordinates && complaint.location.coordinates.length === 2)) {
+      const { localAuthority: authority, ward } = await resolveGisBoundariesFromComplaintLocation(complaint.location);
 
       if (authority) {
         localAuthorityId = authority._id;
+        wardBoundary = ward;
+        if (ward?.name) complaint.location.ward = ward.name;
         const departmentNames = departmentNameCandidates(mappedDepartment, analysis.category);
-        const departmentQuery = {
-          localAuthority: authority._id,
+        const departmentMatch = {
           active: true,
           $or: [
             { categories: analysis.category },
@@ -64,14 +55,32 @@ export async function routeComplaint(complaint) {
           ]
         };
 
-        department = await Department.findOne(departmentQuery);
+        department = await Department.findOne({ ...departmentMatch, localAuthority: authority._id })
+          || await Department.findOne({
+            $and: [
+              departmentMatch,
+              {
+                $or: [
+                  { localAuthority: { $exists: false } },
+                  { localAuthority: null }
+                ]
+              }
+            ]
+          });
 
         if (department) {
-          assignedOfficer = await User.findOne({
+          const officerQuery = {
             role: 'department_officer',
             department: department._id,
             localAuthority: authority._id,
             active: true
+          };
+          const wardOfficer = ward?.name
+            ? await User.findOne({ ...officerQuery, ward: ward.name }).sort('createdAt').select('_id')
+            : null;
+          assignedOfficer = wardOfficer || await User.findOne({
+            ...officerQuery,
+            $or: [{ ward: { $exists: false } }, { ward: '' }, { ward: null }]
           }).sort('createdAt').select('_id');
           if (assignedOfficer) routingStatus = 'Routed';
         }
@@ -90,6 +99,7 @@ export async function routeComplaint(complaint) {
     complaint.severity = analysis.severity;
     complaint.aiConfidence = analysis.confidence;
     complaint.localAuthority = localAuthorityId;
+    complaint.wardBoundary = wardBoundary?._id;
     complaint.routingStatus = routingStatus;
     complaint.assignedTo = assignedOfficer?._id;
     complaint.aiAnalysis = {
@@ -104,10 +114,10 @@ export async function routeComplaint(complaint) {
       complaint.department = department.id;
       complaint.status = 'Assigned';
       complaint.assignedAt = new Date();
-      complaint.timeline.push({ status: 'Assigned', remark: `Automatically routed to ${department.name}` });
+      complaint.timeline.push({ status: 'Assigned', remark: `Automatically routed to ${department.name}${wardBoundary?.name ? `, ${wardBoundary.name}` : ''}` });
     } else {
       complaint.status = 'Under Review';
-      complaint.timeline.push({ status: 'Under Review', remark: 'Automatic routing could not find a matching service-area officer' });
+      complaint.timeline.push({ status: 'Under Review', remark: 'Automatic routing needs review: service area, department, or matching officer was not found' });
     }
 
     await complaint.save();

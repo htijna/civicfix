@@ -70,8 +70,7 @@ export default function AuthPage({ mode }) {
           name: form.get('name'),
           email: emailVal,
           password: form.get('password'),
-          phone: phone.trim(),
-          ward: form.get('ward')
+          phone: phone.trim()
         });
       } else {
         const signedInUser = isAdminLogin
@@ -116,8 +115,8 @@ export default function AuthPage({ mode }) {
           <form onSubmit={submit} noValidate>
             {registering && (
               <>
-                <label>Full name<input name="name" required placeholder="Your full name" /></label>
                 <div className="two">
+                  <label>Full name<input name="name" required placeholder="Your full name" /></label>
                   <label>
                     Phone
                     <input
@@ -145,7 +144,6 @@ export default function AuthPage({ mode }) {
                       style={phoneHasError ? { borderColor: '#b84332', backgroundColor: '#fff5f3' } : {}}
                     />
                   </label>
-                  <label>Ward<input name="ward" placeholder="Ward" /></label>
                 </div>
               </>
             )}

@@ -2,25 +2,25 @@ import mongoose from 'mongoose';
 
 const schema = new mongoose.Schema({
   name: { type: String, required: true, trim: true },
+  number: { type: String, trim: true },
   code: { type: String, required: true, unique: true, trim: true },
-  district: { type: String, trim: true },
-  state: { type: String, trim: true },
-  source: { type: String, enum: ['official_gis', 'manual', 'auto_detected'], default: 'official_gis' },
-  detectedAddress: { type: String, trim: true },
+  district: { type: String, enum: ['Thrissur', 'Ernakulam'], required: true },
+  localAuthority: { type: mongoose.Schema.Types.ObjectId, ref: 'LocalAuthority', required: true },
   boundary: {
     type: {
       type: String,
       enum: ['Polygon', 'MultiPolygon'],
-      required() { return this.source !== 'auto_detected'; }
+      required: true
     },
     coordinates: {
       type: mongoose.Schema.Types.Mixed,
-      required() { return this.source !== 'auto_detected'; }
+      required: true
     }
   },
   status: { type: Boolean, default: true }
 }, { timestamps: true });
 
 schema.index({ boundary: '2dsphere' });
+schema.index({ localAuthority: 1, status: 1 });
 
-export default mongoose.model('LocalAuthority', schema);
+export default mongoose.model('WardBoundary', schema);

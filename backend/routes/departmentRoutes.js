@@ -5,11 +5,11 @@ import { protect, allow } from '../middleware/authMiddleware.js';
 const router = Router();
 router.use(protect);
 router.get('/', async (_req, res, next) => {
-  try { res.json({ departments: await Department.find({ active: true }).sort('name') }); }
+  try { res.json({ departments: await Department.find({ active: true }).populate('localAuthority', 'name').sort('name') }); }
   catch (error) { next(error); }
 });
 router.get('/admin/all', allow('admin'), async (_req, res, next) => {
-  try { res.json({ departments: await Department.find().sort('name') }); }
+  try { res.json({ departments: await Department.find().populate('localAuthority', 'name').sort('name') }); }
   catch (error) { next(error); }
 });
 router.post('/', allow('admin'), async (req, res, next) => {

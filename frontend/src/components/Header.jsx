@@ -13,7 +13,7 @@ export default function Header() {
         <NavLink to="/">Home</NavLink>
         <a href="#how">How it works</a>
         <a href="#impact">Our impact</a>
-        <NavLink to="/admin-login">Admin login</NavLink>
+       
       </nav>
       <div className="header-actions">
         <Link to="/login?redirect=/dashboard" className="primary small"><Plus size={17} />Report an issue</Link>

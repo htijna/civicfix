@@ -14,6 +14,9 @@ const schema=new mongoose.Schema({
  resetPasswordToken:{type:String,select:false},
  resetPasswordExpires:{type:Date,select:false}
 },{timestamps:true});
+schema.index({ role: 1 });
+schema.index({ department: 1 });
+schema.index({ active: 1 });
 schema.pre('save',async function(next){if(this.isModified('password'))this.password=await bcrypt.hash(this.password,12);next()});
 schema.methods.verifyPassword=function(value){return bcrypt.compare(value,this.password)};
 export default mongoose.model('User',schema);

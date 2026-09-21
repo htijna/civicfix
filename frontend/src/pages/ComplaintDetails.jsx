@@ -12,30 +12,30 @@ const parseInline = (text) => {
   parts = parts.flatMap(part => {
     if (typeof part !== 'string') return [part];
     const split = part.split(/\*\*(.*?)\*\*/g);
-    return split.map((s, i) => i % 2 === 1 ? <strong key={i} style={{ color: 'var(--ink)' }}>{s}</strong> : s);
+    return split.map((s, i) => i % 2 === 1 ? <strong key={`b-${i}`} style={{ color: 'var(--ink)' }}>{s}</strong> : s);
   });
   
   // Code `
-  parts = parts.flatMap(part => {
-    if (typeof part !== 'string') return [part];
-    const split = part.split(/`(.*?)`/g);
-    return split.map((s, i) => i % 2 === 1 ? (
-      <code key={i} style={{ 
-        fontFamily: 'monospace', 
-        background: 'rgba(0,0,0,0.05)', 
-        padding: '2px 6px', 
-        borderRadius: '4px',
-        fontSize: '11px',
-        color: 'var(--green)'
-      }}>{s}</code>
-    ) : s);
-  });
+    parts = parts.flatMap(part => {
+      if (typeof part !== 'string') return [part];
+      const split = part.split(/`(.*?)`/g);
+      return split.map((s, i) => i % 2 === 1 ? (
+        <code key={`code-${i}`} style={{
+          fontFamily: 'monospace',
+          background: 'rgba(0,0,0,0.05)',
+          padding: '2px 6px',
+          borderRadius: '4px',
+          fontSize: '11px',
+          color: 'var(--green)'
+        }}>{s}</code>
+      ) : s);
+    });
   
   // Italic *
   parts = parts.flatMap(part => {
     if (typeof part !== 'string') return [part];
     const split = part.split(/\*(.*?)\*/g);
-    return split.map((s, i) => i % 2 === 1 ? <em key={i}>{s}</em> : s);
+    return split.map((s, i) => i % 2 === 1 ? <em key={`em-${i}`}>{s}</em> : s);
   });
   
   return parts;
@@ -194,8 +194,8 @@ export default function ComplaintDetails() {
             </article>
           ))}
         </div>
-        {!!item.adminRemarks?.length && <><h2>Admin remarks</h2>{item.adminRemarks.map((remark, index) => <p key={index}>{remark.message}</p>)}</>}
-        {!!item.departmentRemarks?.length && <><h2>Department remarks</h2>{item.departmentRemarks.map((remark, index) => <p key={index}>{remark.message}</p>)}</>}
+        {!!item.adminRemarks?.length && <><h2>Admin remarks</h2>{item.adminRemarks.map((remark, index) => <p key={`admin-${index}`}>{remark.message}</p>)}</>}
+        {!!item.departmentRemarks?.length && <><h2>Department remarks</h2>{item.departmentRemarks.map((remark, index) => <p key={`dept-${index}`}>{remark.message}</p>)}</>}
         {item.resolutionDescription && <><h2>Resolution</h2><p>{item.resolutionDescription}</p></>}
         {item.status === 'Submitted' && <div className="detail-actions"><button className="secondary" onClick={edit}>Edit complaint</button><button className="danger-btn" onClick={remove}>Delete complaint</button></div>}
       </section>
